@@ -5,33 +5,35 @@ import os
 
 app = Flask(__name__)
 
-# Database configuration, use environment variables or default values
+#Database configuration, use environment variables or default values
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "webapp_db")
 
-# Check if DB_USER and DB_PASSWORD are set
+#prompt for dbuser and pass
 if not DB_USER or not DB_PASSWORD:
     raise EnvironmentError("Database credentials are not set in environment variables.")
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# Create the SQLAlchemy engine
+#create the SQLAlchemy engine
 engine = create_engine(DATABASE_URL)
 
-# Health check endpoint
+#Health check endpoint
 @app.route('/healthz', methods=['GET'])
 def health_check():
-    # Check if there is any payload
-    if request.get_data():  # This will catch any incoming payload
+    #prevent payload in request
+    if request.args:
         return Response(status=400)
-    
+
     try:
-        # Try to connect to the database
+        #Try to connect to the database
         with engine.connect() as connection:
-            # If successful, return 200 OK
+            #run an sql query to bypass lazy connection
+            result = connection.exec_driver_sql("SELECT 1")
+            #return 200 if successful
             headers = {
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
                 'Pragma': 'no-cache',
@@ -39,21 +41,21 @@ def health_check():
             }
             return Response(status=200, headers=headers)
     except SQLAlchemyError:
-        # If connection fails, return 503 Service Unavailable
+        #return 503 if database error
         headers = {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
             'X-Content-Type-Options': 'nosniff'
         }
         return Response(status=503, headers=headers)
-    except Exception:
-        # If any other error occurs, return 500 Internal Server Error
-        headers = {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'X-Content-Type-Options': 'nosniff'
-        }
-        return Response(status=500, headers=headers)
+    # except Exception:
+    #     # If any other error occurs, return 500 Internal Server Error
+    #     headers = {
+    #         'Cache-Control': 'no-cache, no-store, must-revalidate',
+    #         'Pragma': 'no-cache',
+    #         'X-Content-Type-Options': 'nosniff'
+    #     }
+    #     return Response(status=500, headers=headers)
     
 # Only allow GET method
 @app.route('/healthz', methods=['POST', 'PUT', 'DELETE', 'PATCH'])
@@ -65,6 +67,4 @@ def method_not_allowed():
     }
     return Response(status=405, headers=headers)
 
-if __name__ == '__main__':
-    # Run Flask app on port 8080
-    app.run(host='0.0.0.0', port=8080)
+app.run(host='0.0.0.0', port=8080)
