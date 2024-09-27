@@ -29,7 +29,7 @@ def health_check():
         return Response(status=400)
 
     try:
-        #Try to connect to the database
+        #try to connect to the database
         with engine.connect() as connection:
             #run an sql query to bypass lazy connection
             result = connection.exec_driver_sql("SELECT 1")
@@ -48,16 +48,8 @@ def health_check():
             'X-Content-Type-Options': 'nosniff'
         }
         return Response(status=503, headers=headers)
-    # except Exception:
-    #     # If any other error occurs, return 500 Internal Server Error
-    #     headers = {
-    #         'Cache-Control': 'no-cache, no-store, must-revalidate',
-    #         'Pragma': 'no-cache',
-    #         'X-Content-Type-Options': 'nosniff'
-    #     }
-    #     return Response(status=500, headers=headers)
     
-# Only allow GET method
+#don't allow post, put, delete, patch methods
 @app.route('/healthz', methods=['POST', 'PUT', 'DELETE', 'PATCH'])
 def method_not_allowed():
     headers = {
