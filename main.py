@@ -48,14 +48,6 @@ def health_check():
             'X-Content-Type-Options': 'nosniff'
         }
         return Response(status=503, headers=headers)
-    # except Exception:
-    #     # If any other error occurs, return 500 Internal Server Error
-    #     headers = {
-    #         'Cache-Control': 'no-cache, no-store, must-revalidate',
-    #         'Pragma': 'no-cache',
-    #         'X-Content-Type-Options': 'nosniff'
-    #     }
-    #     return Response(status=500, headers=headers)
     
 # Only allow GET method
 @app.route('/healthz', methods=['POST', 'PUT', 'DELETE', 'PATCH'])
