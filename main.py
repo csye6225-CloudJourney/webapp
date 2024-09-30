@@ -1,12 +1,17 @@
+import json
 from flask import Flask, request, Response, jsonify
-from sqlalchemy import create_engine, Column, String, DateTime
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import create_engine, Column, Integer, String, DateTime
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
 import os
+import re
+import bcrypt
+from datetime import datetime
+from collections import OrderedDict
 
 app = Flask(__name__)
 
@@ -49,6 +54,77 @@ def bootstrap_database():
     except SQLAlchemyError as e:
         print(f"Error bootstrapping the database: {e}")
         raise
+
+#hash passwords using BCrypt
+def hash_password(password):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+#use verify auth token to check if user is authenticated
+
+#endpoint for creating a user
+@app.route('/v1/user', methods=['POST'])
+def create_user():
+    #check for payload
+    if request.content_type != 'application/json' or 'Accept' not in request.headers:
+        return Response(status=69)
+    
+    data = request.get_json()
+
+    #ensure all fields are present
+    required_fields = ['first_name', 'last_name', 'password', 'email']
+    if not all(field in data for field in required_fields):
+        return Response(status=400)
+
+    # Validate email format
+    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    
+    if not re.match(email_regex, data['email']):
+        return Response(status=400)
+    
+    #hash the password
+    hashed_password = hash_password(data['password'])
+
+    #create a new user object
+    new_user = User(
+        first_name=data['first_name'],
+        last_name=data['last_name'],
+        password=hashed_password,
+        email=data['email']
+    )
+    
+
+    session = Session()
+    try:
+        #add and commit the new user to the database
+        session.add(new_user)
+        session.commit()
+
+        #add autopopulated fields
+        created_user = session.query(User).filter_by(email=new_user.email)
+
+        #making account updated same as created initially
+        account_updated = created_user.account_updated or created_user.account_created
+
+
+        #response payload
+        response_data = OrderedDict([
+            ('id', str(created_user.id)),
+            ('first_name', created_user.first_name),
+            ('last_name', created_user.last_name),
+            ('email', created_user.email),
+            ('account_created', created_user.account_created.isoformat()),
+            ('account_updated', account_updated.isoformat())
+        ])
+
+        return jsonify(response_data), 200
+    except IntegrityError:
+        session.rollback()
+        return jsonify({'error': 'User with this email already exists.'}), 400
+    except SQLAlchemyError as e:
+        session.rollback()
+        return Response(status=503)
+    finally:
+        session.close()    
 
 #Health check endpoint
 @app.route('/healthz', methods=['GET'])
