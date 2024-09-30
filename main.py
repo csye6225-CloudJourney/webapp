@@ -1,6 +1,11 @@
-from flask import Flask, request, Response
-from sqlalchemy import create_engine
+from flask import Flask, request, Response, jsonify
+from sqlalchemy import create_engine, Column, String, DateTime
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import func
+import uuid
 import os
 
 app = Flask(__name__)
@@ -12,7 +17,7 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "webapp_db")
 
-#prompt for dbuser and pass
+#err for missing dbuser and pass
 if not DB_USER or not DB_PASSWORD:
     raise EnvironmentError("Database credentials are not set in environment variables.")
 
@@ -21,11 +26,35 @@ DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NA
 #create the SQLAlchemy engine
 engine = create_engine(DATABASE_URL)
 
+#boostrapping the database
+Base = declarative_base()
+Session = sessionmaker(bind=engine)
+
+#create user table
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    password = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False)
+    account_created = Column(DateTime(timezone=True), server_default=func.now())
+    account_updated = Column(DateTime(timezone=True), onupdate=func.now())
+
+#initialize db
+def bootstrap_database():
+    try:
+        Base.metadata.create_all(engine)
+        print("Database bootstrapped successfully.")
+    except SQLAlchemyError as e:
+        print(f"Error bootstrapping the database: {e}")
+        raise
+
 #Health check endpoint
 @app.route('/healthz', methods=['GET'])
 def health_check():
     #prevent payload in request
-    if request.args:
+    if request.args or request.data:
         return Response(status=400)
 
     try:
