@@ -55,6 +55,10 @@ def bootstrap_database():
         print(f"Error bootstrapping the database: {e}")
         raise
 
+# Function to format datetime to UTC string
+def format_datetime_utc(dt):
+    return dt.astimezone().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+
 #hash passwords using BCrypt
 def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
@@ -66,7 +70,7 @@ def hash_password(password):
 def create_user():
     #check for payload
     if request.content_type != 'application/json' or 'Accept' not in request.headers:
-        return Response(status=69)
+        return Response(status=400)
     
     data = request.get_json()
 
@@ -100,11 +104,10 @@ def create_user():
         session.commit()
 
         #add autopopulated fields
-        created_user = session.query(User).filter_by(email=new_user.email)
+        created_user = session.query(User).filter_by(email=new_user.email).first()
 
         #making account updated same as created initially
         account_updated = created_user.account_updated or created_user.account_created
-
 
         #response payload
         response_data = OrderedDict([
@@ -112,13 +115,12 @@ def create_user():
             ('first_name', created_user.first_name),
             ('last_name', created_user.last_name),
             ('email', created_user.email),
-            ('account_created', created_user.account_created.isoformat()),
-            ('account_updated', account_updated.isoformat())
+            ('account_created', format_datetime_utc(created_user.account_created)),
+            ('account_updated', format_datetime_utc(account_updated))
         ])
 
         # Use json.dumps to maintain order in response
         response_json = json.dumps(response_data)
-
         return Response(response=response_json, status=201, mimetype='application/json')
     except IntegrityError:
         session.rollback()
@@ -157,9 +159,19 @@ def health_check():
         }
         return Response(status=503, headers=headers)
     
-#don't allow post, put, delete, patch methods
-@app.route('/healthz', methods=['POST', 'PUT', 'DELETE', 'PATCH'])
+#don't allow post, put, delete, head, options, patch methods
+@app.route('/healthz', methods=['POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'])
 def method_not_allowed():
+    headers = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'X-Content-Type-Options': 'nosniff'
+    }
+    return Response(status=405, headers=headers)
+
+#don't allow delete, head, options, patch methods for /v1/user/self
+@app.route('/v1/user/self', methods=['DELETE', 'HEAD', 'OPTIONS', 'PATCH'])
+def method_not_allowed_user():
     headers = {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
