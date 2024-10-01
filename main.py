@@ -116,7 +116,10 @@ def create_user():
             ('account_updated', account_updated.isoformat())
         ])
 
-        return jsonify(response_data), 200
+        # Use json.dumps to maintain order in response
+        response_json = json.dumps(response_data)
+
+        return Response(response=response_json, status=201, mimetype='application/json')
     except IntegrityError:
         session.rollback()
         return jsonify({'error': 'User with this email already exists.'}), 400
