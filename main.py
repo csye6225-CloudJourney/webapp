@@ -1,6 +1,6 @@
 import json
 from flask import Flask, request, Response, jsonify
-from sqlalchemy import create_engine, Column, Integer, String, DateTime
+from sqlalchemy import create_engine, Column, String, DateTime
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -10,8 +10,9 @@ import uuid
 import os
 import re
 import bcrypt
-from datetime import datetime
 from collections import OrderedDict
+from sqlalchemy import LargeBinary
+
 
 app = Flask(__name__)
 
@@ -41,7 +42,7 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
-    password = Column(String, nullable=False)
+    password = Column(LargeBinary, nullable=False) 
     email = Column(String, unique=True, nullable=False)
     account_created = Column(DateTime(timezone=True), server_default=func.now())
     account_updated = Column(DateTime(timezone=True), onupdate=func.now())
@@ -64,6 +65,19 @@ def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
 #use verify auth token to check if user is authenticated
+def authenticate_user():
+    auth = request.authorization
+    if not auth or not auth.username or not auth.password:
+        return None
+    session = Session()
+    try:
+        user = session.query(User).filter_by(email=auth.username).first()
+        if user and bcrypt.checkpw(auth.password.encode('utf-8'), user.password):
+            return user
+        else:
+            return None
+    finally:
+        session.close()
 
 #endpoint for creating a user
 @app.route('/v1/user', methods=['POST'])
@@ -131,6 +145,65 @@ def create_user():
     finally:
         session.close()    
 
+#authenticated user endpoint
+@app.route('/v1/user/self', methods=['GET', 'PUT'])
+def user_self():
+    user = authenticate_user()
+    if not user:
+        return Response(status=401)
+
+    if request.method == 'GET':
+        # Return the logged-in user's user record
+        response_data = OrderedDict([
+            ('id', str(user.id)),
+            ('first_name', user.first_name),
+            ('last_name', user.last_name),
+            ('email', user.email),
+            ('account_created', format_datetime_utc(user.account_created)),
+            ('account_updated', format_datetime_utc(user.account_updated or user.account_created))
+        ])
+        response_json = json.dumps(response_data)
+        return Response(response=response_json, status=200, mimetype='application/json')
+
+    elif request.method == 'PUT':
+        if request.content_type != 'application/json' or 'Accept' not in request.headers:
+            return Response(status=400)
+        
+        data = request.get_json()
+        if not data:
+            return Response(status=204)
+
+        allowed_fields = ['first_name', 'last_name', 'password', 'email']
+        if not any(field in data for field in allowed_fields):
+            return Response(status=400)
+
+        session = Session()
+        try:
+            user_in_db = session.query(User).filter_by(id=user.id).first()
+            if 'first_name' in data:
+                user_in_db.first_name = data['first_name']
+            if 'last_name' in data:
+                user_in_db.last_name = data['last_name']
+            if 'password' in data:
+                user_in_db.password = hash_password(data['password'])
+            if 'email' in data:
+                # Validate email format
+                email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+                if not re.match(email_regex, data['email']):
+                    return Response(status=400)
+                # Check if email already exists
+                existing_user = session.query(User).filter_by(email=data['email']).first()
+                if existing_user and existing_user.id != user.id:
+                    return jsonify({'error': 'Email already in use.'}), 400
+                user_in_db.email = data['email']
+            session.commit()
+            return Response(status=204)
+        except SQLAlchemyError as e:
+            session.rollback()
+            return Response(status=503)
+        finally:
+            session.close()
+
 #Health check endpoint
 @app.route('/healthz', methods=['GET'])
 def health_check():
@@ -179,4 +252,5 @@ def method_not_allowed_user():
     }
     return Response(status=405, headers=headers)
 
+bootstrap_database()
 app.run(host='0.0.0.0', port=8080)
