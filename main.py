@@ -18,7 +18,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
-#Database configuration, use environment variables or default values
+#setting up env variables for db
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST", "localhost")
@@ -58,7 +58,7 @@ def bootstrap_database():
         print(f"Error bootstrapping the database: {e}")
         raise
 
-# Function to format datetime to UTC string
+#formatting date time to utc
 def format_datetime_utc(dt):
     return dt.astimezone().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
@@ -95,7 +95,7 @@ def create_user():
     if not all(field in data for field in required_fields):
         return Response(status=400)
 
-    # Validate email format
+    #ensure email is valid
     email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
     
     if not re.match(email_regex, data['email']):
@@ -104,7 +104,7 @@ def create_user():
     #hash the password
     hashed_password = hash_password(data['password'])
 
-    #create a new user object
+    #create a new user object 
     new_user = User(
         first_name=data['first_name'],
         last_name=data['last_name'],
@@ -119,7 +119,7 @@ def create_user():
         session.add(new_user)
         session.commit()
 
-        #add autopopulated fields
+        #adding autopolulated fields
         created_user = session.query(User).filter_by(email=new_user.email).first()
 
         #making account updated same as created initially
@@ -140,7 +140,7 @@ def create_user():
         return Response(response=response_json, status=201, mimetype='application/json')
     except IntegrityError:
         session.rollback()
-        return jsonify({'error': 'User with this email already exists.'}), 400
+        return Response(status=400)
     except SQLAlchemyError as e:
         session.rollback()
         return Response(status=503)
@@ -155,7 +155,7 @@ def user_self():
         return Response(status=401)
 
     if request.method == 'GET':
-        # Return the logged-in user's user record
+        #return logged in user details
         response_data = OrderedDict([
             ('id', str(user.id)),
             ('first_name', user.first_name),
@@ -189,15 +189,8 @@ def user_self():
             if 'password' in data:
                 user_in_db.password = hash_password(data['password'])
             if 'email' in data:
-                # Validate email format
-                email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-                if not re.match(email_regex, data['email']):
+                if data['email'] != user.email:
                     return Response(status=400)
-                # Check if email already exists
-                existing_user = session.query(User).filter_by(email=data['email']).first()
-                if existing_user and existing_user.id != user.id:
-                    return jsonify({'error': 'Email already in use.'}), 400
-                user_in_db.email = data['email']
             session.commit()
             return Response(status=204)
         except SQLAlchemyError as e:
@@ -255,4 +248,6 @@ def method_not_allowed_user():
     return Response(status=405, headers=headers)
 
 bootstrap_database()
-app.run(host='0.0.0.0', port=8080)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
