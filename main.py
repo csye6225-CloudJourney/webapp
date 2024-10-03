@@ -12,7 +12,9 @@ import re
 import bcrypt
 from collections import OrderedDict
 from sqlalchemy import LargeBinary
+from dotenv import load_dotenv  
 
+load_dotenv()
 
 app = Flask(__name__)
 
