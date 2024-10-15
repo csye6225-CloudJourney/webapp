@@ -2,8 +2,7 @@ import json
 from flask import Flask, request, Response, jsonify
 from sqlalchemy import create_engine, Column, String, DateTime
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -247,7 +246,6 @@ def method_not_allowed_user():
     }
     return Response(status=405, headers=headers)
 
-bootstrap_database()
-
 if __name__ == '__main__':
+    bootstrap_database()
     app.run(host='0.0.0.0', port=8080)

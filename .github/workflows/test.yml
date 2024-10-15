@@ -1,108 +1,29 @@
-import unittest
-from unittest.mock import patch, MagicMock
-from main import app
+name: Python Unit Tests with Mocks
 
-class UserAPITestCase(unittest.TestCase):
+on:
+  push:
+    branches:
+      - main
 
-    def setUp(self):
-        self.app = app.test_client()
-        self.app.testing = True
+jobs:
+  test:
+    runs-on: ubuntu-22.04
 
-    # Test health check endpoint
-    @patch('main.engine.connect')
-    def test_health_check_success(self, mock_connect):
-        mock_connect.return_value = MagicMock()
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-        response = self.app.get('/healthz')
-        self.assertEqual(response.status_code, 200)
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
 
-    # Test health check failure
-    @patch('main.engine.connect', side_effect=Exception("DB connection failed"))
-    def test_health_check_failure(self, mock_connect):
-        response = self.app.get('/healthz')
-        self.assertEqual(response.status_code, 503)
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-mock
 
-    # Test user creation with missing fields
-    def test_create_user_missing_fields(self):
-        response = self.app.post('/v1/user', json={
-            'first_name': 'John',
-            'last_name': 'Doe',
-            # Missing 'email' and 'password'
-        }, headers={'Accept': 'application/json'})
-
-        self.assertEqual(response.status_code, 400)
-
-    # Test user creation with valid data
-    @patch('main.Session')
-    def test_create_user_success(self, mock_session):
-        mock_session.return_value = MagicMock()
-
-        response = self.app.post('/v1/user', json={
-            'first_name': 'John',
-            'last_name': 'Doe',
-            'password': 'password123',
-            'email': 'john.doe@example.com'
-        }, headers={'Accept': 'application/json'})
-
-        self.assertEqual(response.status_code, 201)
-
-    # Test authentication failure
-    @patch('main.Session')
-    def test_user_authentication_fail(self, mock_session):
-        mock_session.return_value.query().filter_by().first.return_value = None
-
-        response = self.app.get('/v1/user/self', headers={
-            'Authorization': 'Basic dXNlcm5hbWU6cGFzc3dvcmQ='
-        })
-        self.assertEqual(response.status_code, 401)
-
-    # Test authenticated user endpoint success
-    @patch('main.authenticate_user')
-    def test_user_self_get_success(self, mock_auth):
-        mock_user = MagicMock()
-        mock_user.id = '123'
-        mock_user.first_name = 'John'
-        mock_user.last_name = 'Doe'
-        mock_user.email = 'john.doe@example.com'
-        mock_user.account_created = MagicMock()
-        mock_user.account_updated = MagicMock()
-        mock_auth.return_value = mock_user
-
-        response = self.app.get('/v1/user/self', headers={
-            'Authorization': 'Basic dXNlcm5hbWU6cGFzc3dvcmQ='
-        })
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('id', response.get_json())
-
-    # Test PUT user with valid data
-    @patch('main.authenticate_user')
-    @patch('main.Session')
-    def test_user_self_put_success(self, mock_session, mock_auth):
-        mock_user = MagicMock()
-        mock_auth.return_value = mock_user
-        mock_session.return_value.query().filter_by().first.return_value = mock_user
-
-        response = self.app.put('/v1/user/self', json={
-            'first_name': 'Johnny',
-            'last_name': 'Doe',
-            'password': 'newpassword'
-        }, headers={
-            'Authorization': 'Basic dXNlcm5hbWU6cGFzc3dvcmQ=',
-            'Accept': 'application/json'
-        })
-
-        self.assertEqual(response.status_code, 204)
-
-    # Test invalid method on /healthz
-    def test_invalid_method_healthz(self):
-        response = self.app.post('/healthz')
-        self.assertEqual(response.status_code, 405)
-
-    # Test invalid method on /v1/user/self
-    def test_invalid_method_user_self(self):
-        response = self.app.delete('/v1/user/self')
-        self.assertEqual(response.status_code, 405)
-
-if __name__ == '__main__':
-    unittest.main()
+    - name: Run Unit Tests
+      run: |
+        pytest --maxfail=5 --disable-warnings
