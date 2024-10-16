@@ -26,7 +26,7 @@ def test_health_check(mocker, client):
     mock_connection.exec_driver_sql.return_value = None
     
     response = client.get('/healthz')
-    assert response.status_code == 200
+    assert response.status_code == 204
 
 def test_create_user_success(mocker, client):
     """Test creating a user with mock DB"""
