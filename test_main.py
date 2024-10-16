@@ -27,6 +27,7 @@ def test_health_check(mocker, client):
     
     response = client.get('/healthz')
     assert response.status_code == 204
+    
 
 def test_create_user_success(mocker, client):
     """Test creating a user with mock DB"""
