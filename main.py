@@ -199,7 +199,7 @@ def user_self():
             session.close()
 
 #Health check endpoint
-@app.route('/healthz', methods=['GET'])
+@app.route('/healthz1', methods=['GET'])
 def health_check():
     #prevent payload in request
     if request.args or request.data:
