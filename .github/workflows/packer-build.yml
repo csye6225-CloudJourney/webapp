@@ -1,0 +1,64 @@
+name: Packer Build on Merge
+
+on:
+  push:
+    branches:
+      - main  # Trigger only when code is merged into the main branch
+
+jobs:
+  packer-build:
+    name: Packer Build and Artifact Integration
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Python environment and install dependencies
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r webapp/requirements.txt
+
+      # Run the tests (ensure integration tests pass)
+      - name: Run tests
+        run: |
+          pytest webapp/test_main.py
+
+      # Build the application artifact
+      - name: Build application artifact
+        run: |
+          mkdir build_output
+          tar -czvf build_output/app_binary.tar.gz -C webapp main.py
+
+      # Set up Packer
+      - name: Set up Packer
+        uses: hashicorp/setup-packer@v2
+        with:
+          version: '1.11.2'
+
+      # Initialize Packer
+      - name: Run packer init to initialize plugins
+        run: |
+          packer init webapp/webapp.pkr.hcl
+
+      # Run Packer validate to ensure template correctness
+      - name: Run packer validate
+        run: |
+          packer validate webapp/webapp.pkr.hcl
+
+      # Build the custom image with Packer
+      - name: Build custom AMI with Packer
+        run: |
+          packer build webapp/webapp.pkr.hcl
+
+    # Set up AWS credentials for Packer to use
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
