@@ -1,13 +1,12 @@
-name: testing python code
-
+name: Test Workflow
 on:
-  push:
-    branches:
-      - main
+    pull_request:
+        branches:
+            - main
 
 jobs:
   build-test:
-              runs-on: ubuntu-22.04
+              runs-on: ubuntu-latest
 
               steps:
               - name: Checkout code
