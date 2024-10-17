@@ -41,8 +41,8 @@ build {
       "sudo apt-get upgrade -y",
       "sudo apt-get install -y python3-pip python3-dev libpq-dev postgresql postgresql-contrib",
       "sudo useradd -m -s /bin/false csye6225",
-      "sudo mkdir -p /home/csye6225/app",
-      "sudo chown csye6225:csye6225 /home/csye6225/app"
+      "sudo mkdir -p /home/csye6225/app",      
+      "sudo chown csye6225:csye6225 /home/csye6225/app" 
     ]
   }
 
@@ -54,17 +54,17 @@ build {
   provisioner "shell" {
     inline = [
       "cd /home/csye6225/app",
-      "sudo tar -xzf app_binary.tar.gz",
-      "sudo rm app_binary.tar.gz"
+      "sudo tar -xzf app_binary.tar.gz",  
+      "sudo rm app_binary.tar.gz"         
     ]
   }
 
   provisioner "shell" {
     inline = [
-      "sudo cp /home/csye6225/app/webapp.service /etc/systemd/system/webapp.service",
-      "sudo systemctl daemon-reload",
-      "sudo systemctl enable webapp.service",
-      "sudo systemctl start webapp.service"
+      "sudo cp /home/csye6225/app/webapp.service /etc/systemd/system/webapp.service", 
+      "sudo systemctl daemon-reload", 
+      "sudo systemctl enable webapp.service",  
+      "sudo systemctl start webapp.service"    
     ]
   }
 
