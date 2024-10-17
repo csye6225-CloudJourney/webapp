@@ -3,7 +3,7 @@ name: Packer Build on Merge
 on:
   push:
     branches:
-      - main  # Trigger only when code is merged into the main branch
+      - main  
 
 jobs:
   packer-build:
