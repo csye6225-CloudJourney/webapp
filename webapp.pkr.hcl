@@ -40,10 +40,10 @@ build {
       "sudo apt-get update",
       "sudo apt-get upgrade -y",
       "sudo apt-get install -y python3-pip python3-dev libpq-dev postgresql postgresql-contrib",
-      "sudo useradd -m -s /bin/false csye6225",
+      "sudo useradd -m -s /usr/sbin/nologin csye6225",  # Create non-login user
       "sudo mkdir -p /home/csye6225/app",
       "sudo chown csye6225:csye6225 /home/csye6225/app",
-      "sudo chmod 755 /home/csye6225/app" # Ensure correct permissions
+      "sudo chmod 755 /home/csye6225/app"
     ]
   }
 
@@ -56,16 +56,22 @@ build {
     inline = [
       "cd /home/csye6225/app",
       "sudo tar -xzf app_binary.tar.gz",
-      "sudo rm app_binary.tar.gz"
+      "sudo rm app_binary.tar.gz",
+      "sudo chown -R csye6225:csye6225 /home/csye6225/app"  # Ensure proper ownership of app files
     ]
+  }
+
+  provisioner "file" {
+    source      = "webapp.service"
+    destination = "/home/csye6225/app/webapp.service"
   }
 
   provisioner "shell" {
     inline = [
-      "sudo cp /home/csye6225/app/webapp.service /etc/systemd/system/webapp.service",
-      "sudo systemctl daemon-reload",
-      "sudo systemctl enable webapp.service",
-      "sudo systemctl start webapp.service"
+      "sudo mv /home/csye6225/app/webapp.service /etc/systemd/system/webapp.service",  # Move the service file to the correct location
+      "sudo systemctl daemon-reload",  # Reload systemd to recognize the new service
+      "sudo systemctl enable webapp.service",  # Enable the service to start at boot
+      "sudo systemctl start webapp.service"  # Start the service immediately
     ]
   }
 

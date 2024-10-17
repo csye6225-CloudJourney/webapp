@@ -23,9 +23,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run unit tests
+      - name: Run integration tests
         run: |
-          pytest test_main.py
+          pytest test_integration.py
         env:
           DB_USER: testuser
           DB_PASSWORD: testpassword
@@ -33,11 +33,10 @@ jobs:
           DB_PORT: 5432
           DB_NAME: webapp_db
 
-      - name: Create build directory and package app
+      - name: Build application artifact
         run: |
           mkdir -p build_output
           tar -czvf build_output/app_binary.tar.gz main.py
-          # Check if the tarball was successfully created
           if [ ! -f build_output/app_binary.tar.gz ]; then
             echo "Error: app_binary.tar.gz not found!"
             exit 1
