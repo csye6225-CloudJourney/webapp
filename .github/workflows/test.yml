@@ -1,4 +1,4 @@
-name: Python Unit Tests with Mocks
+name: test
 
 on:
   push:
