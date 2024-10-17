@@ -62,17 +62,17 @@ jobs:
       # Initialize Packer
       - name: Run packer init to initialize plugins
         run: |
-          packer init webapp/webapp.pkr.hcl
+          packer init webapp.pkr.hcl
 
       # Run Packer validate to ensure template correctness
       - name: Run packer validate
         run: |
-          packer validate webapp/webapp.pkr.hcl
+          packer validate webapp.pkr.hcl
 
       # Build the custom image with Packer
       - name: Build custom AMI with Packer
         run: |
-          packer build webapp/webapp.pkr.hcl
+          packer build webapp.pkr.hcl
 
     # Set up AWS credentials for Packer to use
     env:
