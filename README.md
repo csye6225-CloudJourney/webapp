@@ -9,7 +9,7 @@ PREREQUISITES:
 INSTALLATION:
 1. Start the postgresql db
 2. Push the db_user and db_pass into the env variables 
-3. Run the application and use postman to test the application 
+3. Run the application and use postman to test the application.
 
 
 	
