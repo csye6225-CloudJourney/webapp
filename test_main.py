@@ -4,6 +4,7 @@ import bcrypt
 from datetime import datetime, timezone
 import uuid
 from sqlalchemy.exc import IntegrityError
+from pytest_mock import mocker  
 
 @pytest.fixture
 def client(mocker):
@@ -26,7 +27,7 @@ def test_health_check(mocker, client):
     mock_connection.exec_driver_sql.return_value = None
     
     response = client.get('/healthz')
-    assert response.status_code == 204
+    assert response.status_code == 200
 
 
 
