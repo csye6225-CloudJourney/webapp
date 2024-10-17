@@ -20,7 +20,7 @@ variable "instance_type" {
 
 variable "ubuntu_ami" {
   type    = string
-  default = "ami-0866a3c8686eaeeba"  # Ubuntu 24.04 LTS
+  default = "ami-0866a3c8686eaeeba" # Ubuntu 24.04 LTS
 }
 
 source "amazon-ebs" "webapp_source" {
