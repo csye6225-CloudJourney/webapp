@@ -1,0 +1,43 @@
+name: Packer CI
+
+on:
+  pull_request:
+    branches:
+      - main  
+
+jobs:
+  packer-ci:
+    name: Packer Continuous Integration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Packer
+        uses: hashicorp/setup-packer@v2
+        with:
+          version: '1.11.2'
+
+      - name: Create dummy app_binary.tar.gz
+        run: |
+          touch app_binary.tar.gz
+
+      - name: Run packer init to initialize plugins
+        run: |
+          packer init .
+        continue-on-error: false
+
+      - name: Run packer fmt to check formatting
+        run: |
+          packer fmt -check -recursive .
+        continue-on-error: false
+
+      - name: Run packer validate to validate template
+        run: |
+          packer validate webapp.pkr.hcl
+        continue-on-error: false
+
+      - name: Clean up dummy files
+        run: |
+          rm app_binary.tar.gz
