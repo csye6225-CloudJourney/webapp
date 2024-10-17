@@ -14,15 +14,12 @@ jobs:
       # Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          node-version: '20'
 
       # Set up Python environment and install dependencies
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-          node-version: '20'
 
       - name: Install Python dependencies
         run: |
@@ -31,6 +28,12 @@ jobs:
 
       # Run the tests (ensure integration tests pass)
       - name: Run tests
+        env:
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: "localhost"
+          DB_PORT: "5432"
+          DB_NAME: "webapp_db"
         run: |
           pytest test_main.py
 
@@ -49,17 +52,17 @@ jobs:
       # Initialize Packer
       - name: Run packer init to initialize plugins
         run: |
-          packer init webapp.pkr.hcl
+          packer init webapp/webapp.pkr.hcl
 
       # Run Packer validate to ensure template correctness
       - name: Run packer validate
         run: |
-          packer validate webapp.pkr.hcl
+          packer validate webapp/webapp.pkr.hcl
 
       # Build the custom image with Packer
       - name: Build custom AMI with Packer
         run: |
-          packer build webapp.pkr.hcl
+          packer build webapp/webapp.pkr.hcl
 
     # Set up AWS credentials for Packer to use
     env:
