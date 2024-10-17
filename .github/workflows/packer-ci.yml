@@ -38,6 +38,13 @@ jobs:
           mkdir -p build_output
           tar -czvf build_output/app_binary.tar.gz main.py
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
       - name: Set up Packer
         uses: hashicorp/setup-packer@v2
         with:
@@ -57,6 +64,10 @@ jobs:
         run: |
           packer validate webapp.pkr.hcl
         continue-on-error: false
+
+      - name: Run packer build
+        run: |
+          packer build webapp.pkr.hcl
 
       - name: Clean up build output
         run: |
