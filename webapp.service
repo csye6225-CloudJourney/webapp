@@ -1,0 +1,13 @@
+[Unit]
+Description=Web Application Service
+After=network.target
+
+[Service]
+User=webappA4
+Group=webappA4
+WorkingDirectory=/opt/myapp
+ExecStart=/usr/bin/python3 /opt/myapp/main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
