@@ -15,6 +15,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Set up PostgreSQL
+      - name: Set up PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-contrib
+          sudo service postgresql start
+          sudo -u postgres psql -c "CREATE USER testuser WITH PASSWORD 'testpassword';"
+          sudo -u postgres psql -c "CREATE DATABASE webapp_db;"
+          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE webapp_db TO testuser;"
+
       # Set up Python environment and install dependencies
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -29,8 +39,8 @@ jobs:
       # Run the tests (ensure integration tests pass)
       - name: Run tests
         env:
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_USER: "testuser"
+          DB_PASSWORD: "testpassword"
           DB_HOST: "localhost"
           DB_PORT: "5432"
           DB_NAME: "webapp_db"
