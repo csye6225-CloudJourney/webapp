@@ -1,80 +1,64 @@
-name: Packer Build on Merge
+name: Packer Build and Artifact Integration
 
 on:
   push:
     branches:
-      - main  # Trigger only when code is merged into the main branch
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  packer-build:
-    name: Packer Build and Artifact Integration
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-22.04
 
     steps:
-      # Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Set up PostgreSQL
-      - name: Set up PostgreSQL
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql postgresql-contrib
-          sudo service postgresql start
-          sudo -u postgres psql -c "CREATE USER testuser WITH PASSWORD 'testpassword';"
-          sudo -u postgres psql -c "CREATE DATABASE webapp_db;"
-          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE webapp_db TO testuser;"
-
-      # Set up Python environment and install dependencies
-      - name: Set up Python
+      - name: Set up Python 3.x
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
 
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Run the tests (ensure integration tests pass)
-      - name: Run tests
-        env:
-          DB_USER: "testuser"
-          DB_PASSWORD: "testpassword"
-          DB_HOST: "localhost"
-          DB_PORT: "5432"
-          DB_NAME: "webapp_db"
+      - name: Run unit tests
         run: |
           pytest test_main.py
+        env:
+          DB_USER: testuser
+          DB_PASSWORD: testpassword
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: webapp_db
 
-      # Build the application artifact
-      - name: Build application artifact
+      - name: Create build directory and package app
         run: |
-          mkdir build_output
+          mkdir -p build_output
           tar -czvf build_output/app_binary.tar.gz main.py
+          # Check if the tarball was successfully created
+          if [ ! -f build_output/app_binary.tar.gz ]; then
+            echo "Error: app_binary.tar.gz not found!"
+            exit 1
+          fi
 
-      # Set up Packer
       - name: Set up Packer
         uses: hashicorp/setup-packer@v2
         with:
           version: '1.11.2'
 
-      # Initialize Packer
-      - name: Run packer init to initialize plugins
+      - name: Initialize Packer
         run: |
           packer init webapp.pkr.hcl
 
-      # Run Packer validate to ensure template correctness
-      - name: Run packer validate
+      - name: Validate Packer template
         run: |
           packer validate webapp.pkr.hcl
 
-      # Build the custom image with Packer
-      - name: Build custom AMI with Packer
+      - name: Build Packer image
         run: |
           packer build webapp.pkr.hcl
-
-    # Set up AWS credentials for Packer to use
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
