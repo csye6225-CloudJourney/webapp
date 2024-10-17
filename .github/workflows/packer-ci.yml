@@ -14,18 +14,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest test_main.py
+        env:
+          DB_USER: testuser
+          DB_PASSWORD: testpassword
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: webapp_db
+
+      - name: Create app_binary.tar.gz
+        run: |
+          mkdir -p build_output
+          tar -czvf build_output/app_binary.tar.gz main.py
+
       - name: Set up Packer
         uses: hashicorp/setup-packer@v2
         with:
           version: '1.11.2'
 
-      - name: Create dummy app_binary.tar.gz
-        run: |
-          touch app_binary.tar.gz
-
       - name: Run packer init to initialize plugins
         run: |
-          packer init .
+          packer init webapp.pkr.hcl
         continue-on-error: false
 
       - name: Run packer fmt to check formatting
@@ -38,6 +58,6 @@ jobs:
           packer validate webapp.pkr.hcl
         continue-on-error: false
 
-      - name: Clean up dummy files
+      - name: Clean up build output
         run: |
-          rm app_binary.tar.gz
+          rm -rf build_output
