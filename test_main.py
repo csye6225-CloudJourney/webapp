@@ -4,6 +4,7 @@ import bcrypt
 from datetime import datetime, timezone
 import uuid
 from sqlalchemy.exc import IntegrityError
+from pytest_mock import mocker  
 
 @pytest.fixture
 def client(mocker):
@@ -27,6 +28,8 @@ def test_health_check(mocker, client):
     
     response = client.get('/healthz')
     assert response.status_code == 200
+
+
 
 def test_create_user_success(mocker, client):
     """Test creating a user with mock DB"""
