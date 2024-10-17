@@ -29,4 +29,4 @@ jobs:
         
       - name: Run packer validate to validate template
         run: |
-          packer validate webapp.pkr.hcl -except=file webapp.pkr.hcl
+          packer validate -except=file webapp.pkr.hcl
