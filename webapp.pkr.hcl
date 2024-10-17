@@ -35,6 +35,7 @@ build {
   name    = "webapp_build"
   sources = ["source.amazon-ebs.webapp_source"]
 
+  # Install dependencies and create the csye6225 user
   provisioner "shell" {
     inline = [
       "sudo apt-get update",
@@ -47,13 +48,16 @@ build {
     ]
   }
 
+  # Upload the application artifact
   provisioner "file" {
     source      = "build_output/app_binary.tar.gz"
-    destination = "/home/csye6225/app/app_binary.tar.gz"
+    destination = "/tmp/app_binary.tar.gz" # Upload to /tmp first
   }
 
+  # Move and extract the application binary
   provisioner "shell" {
     inline = [
+      "sudo mv /tmp/app_binary.tar.gz /home/csye6225/app/app_binary.tar.gz",
       "cd /home/csye6225/app",
       "sudo tar -xzf app_binary.tar.gz",
       "sudo rm app_binary.tar.gz",
@@ -61,17 +65,19 @@ build {
     ]
   }
 
+  # Upload the systemd service file
   provisioner "file" {
     source      = "webapp.service"
-    destination = "/home/csye6225/app/webapp.service"
+    destination = "/tmp/webapp.service"
   }
 
+  # Move the service file and start the service
   provisioner "shell" {
     inline = [
-      "sudo mv /home/csye6225/app/webapp.service /etc/systemd/system/webapp.service", # Move the service file to the correct location
-      "sudo systemctl daemon-reload",                                                 # Reload systemd to recognize the new service
-      "sudo systemctl enable webapp.service",                                         # Enable the service to start at boot
-      "sudo systemctl start webapp.service"                                           # Start the service immediately
+      "sudo mv /tmp/webapp.service /etc/systemd/system/webapp.service", # Move the service file to the correct location
+      "sudo systemctl daemon-reload",                                   # Reload systemd to recognize the new service
+      "sudo systemctl enable webapp.service",                           # Enable the service to start at boot
+      "sudo systemctl start webapp.service"                             # Start the service immediately
     ]
   }
 
