@@ -43,7 +43,7 @@ build {
       "sudo useradd -m -s /bin/false csye6225",
       "sudo mkdir -p /home/csye6225/app",
       "sudo chown csye6225:csye6225 /home/csye6225/app",
-      "sudo chmod 755 /home/csye6225/app"  # Ensure correct permissions
+      "sudo chmod 755 /home/csye6225/app" # Ensure correct permissions
     ]
   }
 
