@@ -1,4 +1,4 @@
-name: Packer Continuous Integration
+name: Packer Build and Artifact Integration
 
 on:
   push:
