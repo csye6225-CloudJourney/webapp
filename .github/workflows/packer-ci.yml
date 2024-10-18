@@ -19,6 +19,11 @@ jobs:
         with:
           version: '1.11.2'
 
+      - name: Build app binary
+        run: |
+          mkdir -p build_output
+          tar -czvf build_output/app_binary.tar.gz main.py requirements.txt
+
       - name: Run packer fmt to check formatting
         run: packer fmt -check -recursive .
 
