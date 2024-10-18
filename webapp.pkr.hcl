@@ -47,10 +47,10 @@ build {
     script = "scripts/appSetup.sh"
   }
 
- provisioner "shell" {
-  script = "scripts/appInstall.sh"
-  execute_command = "sudo -E sh -c '{{ .Path }}'"
-}
+  provisioner "shell" {
+    script          = "scripts/appInstall.sh"
+    execute_command = "sudo -E sh -c '{{ .Path }}'"
+  }
 
   provisioner "file" {
     source      = "webapp.service"
