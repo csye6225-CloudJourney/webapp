@@ -23,6 +23,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Install PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-contrib
+
+      - name: Start PostgreSQL service
+        run: |
+          sudo service postgresql start
+
+      - name: Set up test database
+        run: |
+          sudo -u postgres psql -c "CREATE USER testuser WITH PASSWORD 'testpassword';"
+          sudo -u postgres psql -c "CREATE DATABASE webapp_db OWNER testuser;"
+
       - name: Run integration tests
         run: |
           pytest test.py
@@ -36,7 +50,7 @@ jobs:
       - name: Build application artifact
         run: |
           mkdir -p build_output
-          tar -czvf build_output/app_binary.tar.gz main.py
+          tar -czvf build_output/app_binary.tar.gz main.py requirements.txt
           if [ ! -f build_output/app_binary.tar.gz ]; then
             echo "Error: app_binary.tar.gz not found!"
             exit 1
@@ -46,6 +60,13 @@ jobs:
         uses: hashicorp/setup-packer@v2
         with:
           version: '1.11.2'
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
       - name: Initialize Packer
         run: |
