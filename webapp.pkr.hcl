@@ -36,17 +36,17 @@ build {
   sources = ["source.amazon-ebs.webapp_source"]
 
   provisioner "shell" {
-    script = "scripts/updateOS.sh"
+    script   = "scripts/updateOS.sh"
     use_sudo = true
   }
 
   provisioner "shell" {
-    script = "scripts/appDirSetup.sh"
-    use_sudo   = true
+    script   = "scripts/appDirSetup.sh"
+    use_sudo = true
   }
 
   provisioner "shell" {
-    script = "scripts/appSetup.sh"
+    script   = "scripts/appSetup.sh"
     use_sudo = true
   }
 
@@ -56,7 +56,7 @@ build {
   }
 
   provisioner "shell" {
-    script = "scripts/appInstall.sh"
+    script   = "scripts/appInstall.sh"
     use_sudo = true
   }
 
@@ -66,7 +66,7 @@ build {
   }
 
   provisioner "shell" {
-    script = "scripts/setupService.sh"
+    script   = "scripts/setupService.sh"
     use_sudo = true
   }
 
