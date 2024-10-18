@@ -3,7 +3,7 @@ name: Packer Build and Artifact Integration
 on:
   push:
     branches:
-      - main  
+      - main  # Runs only after PR is merged
 
 jobs:
   build:
@@ -61,11 +61,13 @@ jobs:
         with:
           version: '1.11.2'
 
-      - name: Configure AWS Credentials
+      # Configure AWS Credentials for DEV account (where AMI is built)
+      - name: Configure AWS Credentials (DEV)
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-profile: dev
+          aws-access-key-id: ${{ secrets.AWS_DEV_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_DEV_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
       - name: Initialize Packer
@@ -76,6 +78,15 @@ jobs:
         run: |
           packer validate webapp.pkr.hcl
 
-      - name: Build Packer image
+      - name: Build Packer image (DEV)
         run: |
           packer build webapp.pkr.hcl
+
+      # Share the AMI with the DEMO account
+      - name: Share AMI with DEMO account
+        run: |
+          AMI_ID=$(packer build -machine-readable webapp.pkr.hcl | awk -F, '/artifact,0,id/ {print $6}')
+          echo "Built AMI ID: $AMI_ID"
+          aws ec2 modify-image-attribute --image-id $AMI_ID --launch-permission "{\"Add\":[{\"UserId\":\"715841348526\"}]}"
+        env:
+          AWS_PROFILE: demo
