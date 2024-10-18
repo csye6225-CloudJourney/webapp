@@ -48,8 +48,7 @@ build {
   }
 
   provisioner "shell" {
-    script          = "scripts/appInstall.sh"
-    execute_command = "sudo -E sh -c '{{ .Path }}'"
+    script = "scripts/appInstall.sh"
   }
 
   provisioner "file" {
