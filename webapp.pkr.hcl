@@ -47,13 +47,9 @@ build {
     script = "scripts/appSetup.sh"
   }
 
-  provisioner "file" {
-    source      = "build_output/app_binary.tar.gz"
-    destination = "/tmp/app_binary.tar.gz"
-  }
-
   provisioner "shell" {
-    script = "scripts/appInstall.sh"
+    script          = "scripts/appInstall.sh"
+    execute_command = "sudo -E sh -c '{{ .Path }}'"
   }
 
   provisioner "file" {
