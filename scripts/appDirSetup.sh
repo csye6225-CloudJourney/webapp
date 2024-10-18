@@ -3,13 +3,13 @@ set -e
 
 # Create non-login user if not exists
 if ! id -u csye6225 >/dev/null 2>&1; then
-  sudo useradd -m -s /usr/sbin/nologin csye6225
+  useradd -m -s /usr/sbin/nologin csye6225
 fi
 
 # Setup application directory
-sudo mkdir -p /home/csye6225/app
-sudo chown csye6225:csye6225 /home/csye6225/app
-sudo chmod 755 /home/csye6225/app
+mkdir -p /home/csye6225/app
+chown csye6225:csye6225 /home/csye6225/app
+chmod 755 /home/csye6225/app
 
 # Verify directory creation
 if [[ ! -d /home/csye6225/app ]]; then
