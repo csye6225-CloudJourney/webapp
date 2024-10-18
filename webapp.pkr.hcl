@@ -48,7 +48,7 @@ build {
   }
 
   provisioner "shell" {
-    script          = "scripts/appInstall.sh"
+    script = "scripts/appInstall.sh"
   }
 
   provisioner "file" {
