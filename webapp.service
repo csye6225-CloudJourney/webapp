@@ -3,11 +3,11 @@ Description=Web Application Service
 After=network.target
 
 [Service]
-User=csye6225              
-Group=csye6225            
-WorkingDirectory=/home/csye6225/app 
-ExecStart=/usr/bin/python3 /home/csye6225/app/main.py  
-Restart=always             
+User=csye6225
+Group=csye6225
+WorkingDirectory=/home/csye6225/app
+ExecStart=/usr/bin/python3 /home/csye6225/app/main.py
+Restart=always
 
 [Install]
-WantedBy=multi-user.target  
+WantedBy=multi-user.target
