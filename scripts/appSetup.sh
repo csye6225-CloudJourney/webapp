@@ -1,16 +1,13 @@
 #!/bin/bash
-
 set -e
 
-# Extract the app binary (your tarball contains main.py and other files)
-sudo tar -xzvf /tmp/app.tar.gz -C /opt/myapp/
+# Install necessary packages
+sudo apt-get install -y python3-pip python3-dev libpq-dev postgresql postgresql-contrib
 
-# Move the extracted main.py to the correct directory (update paths if needed)
-sudo cp /opt/myapp/main.py /opt/myapp/app
+# Enable and start PostgreSQL
+sudo systemctl enable postgresql
+sudo systemctl start postgresql
 
-# Reload and enable the service (since the service file is already in place)
-sudo systemctl daemon-reload
-sudo systemctl enable webapp
-
-# Set ownership for the directory
-sudo chown -R webappA4:webappA4 /opt/myapp
+# Setup PostgreSQL user and database
+sudo -u postgres psql -c "CREATE USER webapp_user WITH PASSWORD 'webapp_password';"
+sudo -u postgres psql -c "CREATE DATABASE webapp_db OWNER webapp_user;"

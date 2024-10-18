@@ -1,8 +1,18 @@
 #!/bin/bash
 set -e
 
-DIR="/opt/myapp"
+# Create non-login user if not exists
+if ! id -u csye6225 >/dev/null 2>&1; then
+  sudo useradd -m -s /usr/sbin/nologin csye6225
+fi
 
-# Create app directory and system user
-sudo mkdir -p "${DIR}"
-sudo useradd --system --shell /usr/sbin/nologin webappA4
+# Setup application directory
+sudo mkdir -p /home/csye6225/app
+sudo chown csye6225:csye6225 /home/csye6225/app
+sudo chmod 755 /home/csye6225/app
+
+# Verify directory creation
+if [[ ! -d /home/csye6225/app ]]; then
+  echo 'Directory /home/csye6225/app not created'
+  exit 1
+fi
