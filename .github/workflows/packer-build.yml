@@ -79,3 +79,7 @@ jobs:
       - name: Build Packer image
         run: |
           packer build webapp.pkr.hcl
+
+      - name: Share AMI with DEMO account
+        run: |
+         aws ec2 modify-image-attribute --image-id $(packer build -machine-readable webapp.pkr.hcl | grep 'artifact,0,id' | cut -d, -f6 | cut -d: -f2) --launch-permission "Add=[{AccountId=715841348526}]"
