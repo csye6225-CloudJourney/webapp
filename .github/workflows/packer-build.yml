@@ -39,7 +39,7 @@ jobs:
 
       - name: Run integration tests
         run: |
-          pytest test.py
+          pytest test_main.py
         env:
           DB_USER: testuser
           DB_PASSWORD: testpassword
