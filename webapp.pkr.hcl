@@ -37,14 +37,17 @@ build {
 
   provisioner "shell" {
     script = "scripts/updateOS.sh"
+    use_sudo = true
   }
 
   provisioner "shell" {
     script = "scripts/appDirSetup.sh"
+    use_sudo   = true
   }
 
   provisioner "shell" {
     script = "scripts/appSetup.sh"
+    use_sudo = true
   }
 
   provisioner "file" {
@@ -54,6 +57,7 @@ build {
 
   provisioner "shell" {
     script = "scripts/appInstall.sh"
+    use_sudo = true
   }
 
   provisioner "file" {
@@ -63,6 +67,7 @@ build {
 
   provisioner "shell" {
     script = "scripts/setupService.sh"
+    use_sudo = true
   }
 
   post-processor "manifest" {
