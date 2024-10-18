@@ -77,9 +77,12 @@ jobs:
           packer validate webapp.pkr.hcl
 
       - name: Build Packer image
+        id: build-image
         run: |
-          packer build webapp.pkr.hcl
+          packer build -machine-readable webapp.pkr.hcl | tee packer_output.log
+          AMI_ID=$(grep 'artifact,0,id' packer_output.log | cut -d, -f6 | cut -d: -f2)
+          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
 
       - name: Share AMI with DEMO account
         run: |
-         aws ec2 modify-image-attribute --image-id $(packer build -machine-readable webapp.pkr.hcl | grep 'artifact,0,id' | cut -d, -f6 | cut -d: -f2) --launch-permission "Add=[{AccountId=715841348526}]"
+          aws ec2 modify-image-attribute --image-id ${{ steps.build-image.outputs.ami_id }} --launch-permission "Add=[{AccountId=715841348526}]"
