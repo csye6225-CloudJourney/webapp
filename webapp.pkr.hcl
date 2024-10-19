@@ -44,8 +44,8 @@ build {
   }
 
   provisioner "file" {
-    source      = "requirements.txt"
-    destination = "/tmp/requirements.txt"
+    source      = "requirements-apt.txt"
+    destination = "/tmp/requirements-apt.txt"
   }
 
   provisioner "file" {
