@@ -83,12 +83,6 @@ jobs:
           AMI_ID=$(grep 'artifact,0,id' packer_output.log | cut -d, -f6 | cut -d: -f2)
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
 
-            - name: Install aws-ami-share
-          run: |
-            curl -LO https://github.com/elastic/aws-ami-share/releases/download/v0.1.0/aws-ami-share-linux-amd64
-            chmod +x aws-ami-share-linux-amd64
-            sudo mv aws-ami-share-linux-amd64 /usr/local/bin/aws-ami-share
-
       - name: Share AMI with DEMO account
         run: |
-          aws-ami-share share-ami --account-id 715841348526 --image-id ${{ steps.build-image.outputs.ami_id }}
+          aws ec2 modify-image-attribute --image-id ${{ steps.build-image.outputs.ami_id }} --launch-permission "Add=[{UserId=715841348526}]"
