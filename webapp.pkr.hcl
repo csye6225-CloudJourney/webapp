@@ -43,6 +43,16 @@ build {
     script = "scripts/appDirSetup.sh"
   }
 
+  provisioner "file" {
+    source      = "requirements.txt"
+    destination = "/tmp/requirements.txt"
+  }
+
+  provisioner "file" {
+    source      = "main.py"
+    destination = "/tmp/main.py"
+  }
+
   provisioner "shell" {
     script = "scripts/appSetup.sh"
   }

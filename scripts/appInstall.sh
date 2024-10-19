@@ -1,25 +1,18 @@
 #!/bin/bash
 set -e
 
-# Create the build_output directory if it doesn't exist
+# Create the application directory if it doesn't exist
 sudo mkdir -p /home/csye6225/app/build_output
 
-# If there's an app binary tarball to move and extract, do it.
-if [[ -f /tmp/app_binary.tar.gz ]]; then
-    # Move the app binary tarball to the application directory
-    sudo mv /tmp/app_binary.tar.gz /home/csye6225/app/app_binary.tar.gz
-    
-    # Change to the app directory and extract the tarball
-    cd /home/csye6225/app || { echo 'Failed to change directory'; exit 1; }
-    sudo tar -xzf app_binary.tar.gz
-    
-    # Clean up by removing the tarball
-    sudo rm app_binary.tar.gz
+# Move main.py to the application directory (if it was transferred)
+if [[ -f /tmp/main.py ]]; then
+    sudo mv /tmp/main.py /home/csye6225/app/main.py
 else
-    echo "Warning: /tmp/app_binary.tar.gz not found, skipping app extraction step."
+    echo "Warning: /tmp/main.py not found, skipping application setup."
+    exit 1
 fi
 
-# Set proper ownership for the extracted files or existing files
+# Set proper ownership for the application directory and files
 sudo chown -R csye6225:csye6225 /home/csye6225/app
 
 # Create the .env file for environment variables
@@ -35,10 +28,12 @@ EOF
 sudo chown csye6225:csye6225 /home/csye6225/app/.env
 sudo chmod 600 /home/csye6225/app/.env
 
-# Install Python dependencies using apt
-sudo apt-get update
-
-# Install necessary Python packages via apt
-sudo apt-get install -y python3-flask python3-sqlalchemy python3-psycopg2 python3-bcrypt
+# Install Python dependencies using the requirements.txt file
+if [[ -f /tmp/requirements.txt ]]; then
+    xargs -a /tmp/requirements.txt sudo apt-get install -y
+else
+    echo "requirements.txt not found, skipping dependency installation."
+    exit 1
+fi
 
 echo "App installation completed successfully."
