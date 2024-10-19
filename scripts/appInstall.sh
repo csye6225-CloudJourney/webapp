@@ -29,10 +29,10 @@ sudo chown csye6225:csye6225 /home/csye6225/app/.env
 sudo chmod 600 /home/csye6225/app/.env
 
 # Install Python dependencies using the requirements.txt file
-if [[ -f /tmp/requirements.txt ]]; then
-    xargs -a /tmp/requirements.txt sudo apt-get install -y
+if [[ -f /tmp/requirements-apt.txt ]]; then
+    xargs -a /tmp/requirements-apt.txt sudo apt-get install -y
 else
-    echo "requirements.txt not found, skipping dependency installation."
+    echo "requirements-apt.txt not found, skipping dependency installation."
     exit 1
 fi
 
