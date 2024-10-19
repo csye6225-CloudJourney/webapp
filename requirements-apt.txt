@@ -1,0 +1,6 @@
+python3-flask
+python3-sqlalchemy
+python3-psycopg2
+python3-bcrypt
+python3-dotenv
+python3-pytest
