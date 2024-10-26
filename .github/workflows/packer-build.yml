@@ -37,15 +37,23 @@ jobs:
           sudo -u postgres psql -c "CREATE USER testuser WITH PASSWORD 'testpassword';"
           sudo -u postgres psql -c "CREATE DATABASE webapp_db OWNER testuser;"
 
+      - name: Set environment variables for database
+        run: |
+          echo "DB_USERNAME=testuser" >> $GITHUB_ENV
+          echo "DB_PASSWORD=testpassword" >> $GITHUB_ENV
+          echo "DB_HOST=localhost" >> $GITHUB_ENV
+          echo "DB_PORT=5432" >> $GITHUB_ENV
+          echo "DB_NAME=webapp_db" >> $GITHUB_ENV
+
       - name: Run integration tests
         run: |
           pytest test_main.py
         env:
-          DB_USERNAME: testuser
-          DB_PASSWORD: testpassword
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: webapp_db
+          DB_USERNAME: ${{ env.DB_USERNAME }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_HOST: ${{ env.DB_HOST }}
+          DB_PORT: ${{ env.DB_PORT }}
+          DB_NAME: ${{ env.DB_NAME }}
 
       - name: Build application artifact
         run: |
