@@ -18,17 +18,17 @@ load_dotenv()
 app = Flask(__name__)
 
 #setting up env variables for db
-DB_USER = os.getenv("DB_USER")
+DB_USERNAME = os.getenv("DB_USERNAME")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "webapp_db")
 
 #err for missing dbuser and pass
-if not DB_USER or not DB_PASSWORD:
+if not DB_USERNAME or not DB_PASSWORD:
     raise EnvironmentError("Database credentials are not set in environment variables.")
 
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 #create the SQLAlchemy engine
 engine = create_engine(DATABASE_URL)

@@ -15,20 +15,7 @@ fi
 # Set proper ownership for the application directory and files
 sudo chown -R csye6225:csye6225 /home/csye6225/app
 
-# Create the .env file for environment variables
-cat << EOF | sudo tee /home/csye6225/app/.env
-DB_USER=webapp_user
-DB_PASSWORD=webapp_password
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=webapp_db
-EOF
-
-# Set permissions for the .env file
-sudo chown csye6225:csye6225 /home/csye6225/app/.env
-sudo chmod 600 /home/csye6225/app/.env
-
-# Install Python dependencies using the requirements.txt file
+# Install Python dependencies using apt based on requirements-apt.txt
 if [[ -f /tmp/requirements-apt.txt ]]; then
     xargs -a /tmp/requirements-apt.txt sudo apt-get install -y
 else
