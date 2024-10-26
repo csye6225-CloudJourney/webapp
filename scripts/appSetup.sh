@@ -2,12 +2,15 @@
 set -e
 
 # Install necessary packages
-sudo apt-get install -y python3-pip python3-dev libpq-dev postgresql postgresql-contrib
+# sudo apt-get install -y python3-pip python3-dev libpq-dev postgresql postgresql-contrib
+#removing local pg
+sudo apt-get install -y python3-pip python3-dev libpq-dev 
 
+#commenting out because we're switching from local postgres to RDS
 # Enable and start PostgreSQL
-sudo systemctl enable postgresql
-sudo systemctl start postgresql
+# sudo systemctl enable postgresql
+# sudo systemctl start postgresql
 
 # Setup PostgreSQL user and database
-sudo -u postgres psql -c "CREATE USER webapp_user WITH PASSWORD 'webapp_password';"
-sudo -u postgres psql -c "CREATE DATABASE webapp_db OWNER webapp_user;"
+# sudo -u postgres psql -c "CREATE USER webapp_user WITH PASSWORD 'webapp_password';"
+# sudo -u postgres psql -c "CREATE DATABASE webapp_db OWNER webapp_user;"

@@ -41,7 +41,7 @@ jobs:
         run: |
           pytest test_main.py
         env:
-          DB_USER: testuser
+          DB_USERNAME: testuser
           DB_PASSWORD: testpassword
           DB_HOST: localhost
           DB_PORT: 5432
