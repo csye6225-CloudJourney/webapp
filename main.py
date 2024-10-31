@@ -12,12 +12,9 @@ import bcrypt
 from collections import OrderedDict
 from sqlalchemy import LargeBinary
 from dotenv import load_dotenv
-import boto3
-from botocore.exceptions import ClientError
 from statsd import StatsClient
 import time
 import logging
-import watchtower
 from functools import wraps
 
 # Load environment variables
@@ -28,15 +25,9 @@ app = Flask(__name__)
 # Set up StatsD client
 statsd = StatsClient(host='localhost', port=8125, prefix='webapp')
 
-# Set up logging with CloudWatch and console output
+# Set up logging to console
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
-handler = watchtower.CloudWatchLogHandler(
-    log_group='webapp-logs',
-    boto3_client=boto3.client('logs', region_name=AWS_REGION)
-)
-logger.addHandler(handler)
 console_handler = logging.StreamHandler()
 logger.addHandler(console_handler)
 
