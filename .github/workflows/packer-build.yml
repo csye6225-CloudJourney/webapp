@@ -46,6 +46,7 @@ jobs:
           DB_HOST: localhost
           DB_PORT: 5432
           DB_NAME: webapp_db
+          AWS_REGION: us-east-1
           AWS_DEFAULT_REGION: us-east-1  
 
       - name: Build application artifact

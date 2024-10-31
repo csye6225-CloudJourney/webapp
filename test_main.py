@@ -10,14 +10,18 @@ import os
 def client(mocker):
     # Set AWS region before importing main.py
     os.environ['AWS_REGION'] = 'us-east-1'
-
+    os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
+    
+    # Mock boto3 client to prevent NoRegionError
+    mocker.patch('boto3.client', return_value=MagicMock())
+    
     # Mock CloudWatch logging
-    mocker.patch("main.watchtower.CloudWatchLogHandler", return_value=mocker.MagicMock())
-
+    mocker.patch("main.watchtower.CloudWatchLogHandler", return_value=MagicMock())
+    
     # Mock the SQLAlchemy engine
-    mock_engine = mocker.MagicMock()
+    mock_engine = MagicMock()
     mocker.patch('main.engine', mock_engine)
-
+    
     # Import after the patches are applied
     from main import app
     with app.test_client() as client:
@@ -25,7 +29,7 @@ def client(mocker):
 
 def test_health_check(mocker, client):
     """Test health check endpoint"""
-    mock_connection = mocker.MagicMock()
+    mock_connection = MagicMock()
     mocker.patch('main.engine.connect', return_value=mock_connection)
     mock_connection.exec_driver_sql.return_value = None
 
