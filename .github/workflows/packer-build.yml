@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python 3.x
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.12'  # Specify exact version
 
       - name: Install dependencies
         run: |
@@ -31,11 +31,13 @@ jobs:
       - name: Start PostgreSQL service
         run: |
           sudo service postgresql start
+          sleep 5  # Wait for PostgreSQL to start
 
       - name: Set up test database
         run: |
           sudo -u postgres psql -c "CREATE USER testuser WITH PASSWORD 'testpassword';"
           sudo -u postgres psql -c "CREATE DATABASE webapp_db OWNER testuser;"
+          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE webapp_db TO testuser;"
 
       - name: Run integration tests
         run: |
