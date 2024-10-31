@@ -4,6 +4,9 @@ import bcrypt
 from datetime import datetime, timezone
 import uuid
 from sqlalchemy.exc import IntegrityError
+import os
+
+os.environ.setdefault("AWS_REGION", "us-east-1")
 
 @pytest.fixture
 def client(mocker):
