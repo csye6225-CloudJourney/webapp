@@ -24,6 +24,12 @@ def aws_region(monkeypatch):
     """Set AWS region for boto3 calls."""
     monkeypatch.setenv("AWS_REGION", "us-east-1")
 
+@pytest.fixture
+def client(mocker):
+    # Mock CloudWatch logging
+    mocker.patch("main.watchtower.CloudWatchLogHandler", return_value=mocker.MagicMock())
+    # Other mocks if necessary
+
 def test_health_check(mocker, client):
     """Test health check endpoint"""
     mock_connection = mocker.MagicMock()

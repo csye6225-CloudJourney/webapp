@@ -34,6 +34,9 @@ logger.setLevel(logging.INFO)
 handler = watchtower.CloudWatchLogHandler(log_group='webapp-logs')
 logger.addHandler(handler)
 
+region = os.getenv("AWS_REGION", "us-east-1")  # Set a default region
+handler = watchtower.CloudWatchLogHandler(log_group='webapp-logs', region_name=region)
+
 # Optionally, add a StreamHandler to log to console as well
 console_handler = logging.StreamHandler()
 logger.addHandler(console_handler)
