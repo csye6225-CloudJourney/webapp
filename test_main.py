@@ -12,21 +12,11 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # Set environment variables before importing main
-os.environ['AWS_REGION'] = 'us-east-1'
-os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
 os.environ['DB_USERNAME'] = 'test_user'
 os.environ['DB_PASSWORD'] = 'test_pass'
 
-# Create a mock handler with a level attribute
-def mock_cloudwatch_handler(*args, **kwargs):
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.INFO)
-    return handler
-
 # Mock necessary components before importing main
-with patch('boto3.client', MagicMock()), \
-     patch('watchtower.CloudWatchLogHandler', side_effect=mock_cloudwatch_handler), \
-     patch('logging.getLogger') as mock_get_logger, \
+with patch('logging.getLogger') as mock_get_logger, \
      patch('statsd.StatsClient', MagicMock()), \
      patch('sqlalchemy.create_engine') as mock_create_engine, \
      patch('sqlalchemy.orm.sessionmaker') as mock_sessionmaker:

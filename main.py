@@ -12,8 +12,6 @@ import bcrypt
 from collections import OrderedDict
 from sqlalchemy import LargeBinary
 from dotenv import load_dotenv
-import boto3
-from botocore.exceptions import ClientError
 from statsd import StatsClient
 import time
 import logging
