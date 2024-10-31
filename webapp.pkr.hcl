@@ -70,6 +70,20 @@ build {
     script = "scripts/setupService.sh"
   }
 
+  provisioner "file" {
+  source      = "config/cloudwatch-config.json"
+  destination = "/tmp/cloudwatch-config.json"
+  }
+
+  provisioner "shell" {
+    script = "scripts/installCloudWatchAgent.sh"
+  }
+
+  # Start the CloudWatch Agent using the new script
+  provisioner "shell" {
+    script = "scripts/startCloudWatchAgent.sh"
+  }
+
   post-processor "manifest" {
     output = "manifest.json"
   }
