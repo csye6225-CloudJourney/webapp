@@ -4,40 +4,41 @@
       "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
     },
     "metrics": {
-      "namespace": "MyAppNamespace",
+      "namespace": "WebAppMetrics",
       "metrics_collected": {
         "cpu": {
           "resources": ["*"],
           "measurement": [
             {"name": "cpu_usage_idle", "unit": "Percent"},
-            "cpu_usage_user",
-            "cpu_usage_system"
+            {"name": "cpu_usage_user", "unit": "Percent"},
+            {"name": "cpu_usage_system", "unit": "Percent"}
           ],
           "metrics_collection_interval": 10
         },
-        "memory": {
+        "mem": {
           "measurement": [
-            "mem_used_percent",
-            "mem_available"
+            {"name": "mem_used_percent", "unit": "Percent"},
+            {"name": "mem_free", "unit": "Bytes"}
           ],
           "metrics_collection_interval": 10
         },
         "disk": {
           "resources": ["/"],
           "measurement": [
-            "used_percent"
+            {"name": "disk_used_percent", "unit": "Percent"}
           ],
           "metrics_collection_interval": 60
         },
         "net": {
           "resources": ["eth0"],
           "measurement": [
-            "bytes_sent",
-            "bytes_recv"
+            {"name": "net_bytes_sent", "unit": "Bytes"},
+            {"name": "net_bytes_recv", "unit": "Bytes"}
           ],
           "metrics_collection_interval": 60
         },
         "statsd": {
+          "service_address": ":8125",
           "metrics_aggregation_interval": 60
         }
       },
@@ -62,10 +63,16 @@
               "log_group_name": "cloud-init.log",
               "log_stream_name": "{instance_id}",
               "timezone": "UTC"
+            },
+            {
+              "file_path": "/path/to/your/application.log",
+              "log_group_name": "webapp-logs",
+              "log_stream_name": "{instance_id}",
+              "timezone": "UTC"
             }
           ]
         }
       },
-      "log_stream_name": "{instance_id}"
+      "force_flush_interval": 5
     }
   }

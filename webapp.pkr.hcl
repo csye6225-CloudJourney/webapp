@@ -71,8 +71,8 @@ build {
   }
 
   provisioner "file" {
-  source      = "config/cloudwatch-config.json"
-  destination = "/tmp/cloudwatch-config.json"
+    source      = "config/cloudwatch-config.json"
+    destination = "/tmp/cloudwatch-config.json"
   }
 
   provisioner "shell" {
