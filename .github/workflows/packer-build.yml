@@ -3,7 +3,7 @@ name: Packer Build and Artifact Integration
 on:
   push:
     branches:
-      - demo1 
+      - main
 
 jobs:
   build:
