@@ -19,7 +19,8 @@ os.environ['DB_PASSWORD'] = 'test_pass'
 with patch('logging.getLogger') as mock_get_logger, \
      patch('statsd.StatsClient', MagicMock()), \
      patch('sqlalchemy.create_engine') as mock_create_engine, \
-     patch('sqlalchemy.orm.sessionmaker') as mock_sessionmaker:
+     patch('sqlalchemy.orm.sessionmaker') as mock_sessionmaker, \
+     patch('boto3.client', MagicMock()):  # Add this line to mock boto3.client
 
     # Mock the logger to prevent actual logging during tests
     mock_logger = logging.getLogger('test_logger')
@@ -33,7 +34,7 @@ with patch('logging.getLogger') as mock_get_logger, \
     mock_sessionmaker.return_value = mock_sessionmaker_instance
 
     from main import app, Session  # Import Session directly
-
+    
 # Fixture for the test client
 @pytest.fixture(scope='function')
 def client():
