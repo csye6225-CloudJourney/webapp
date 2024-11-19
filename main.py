@@ -141,13 +141,6 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     account_created = Column(DateTime(timezone=True), server_default=func.now())
     account_updated = Column(DateTime(timezone=True), onupdate=func.now())
-    is_verified = Column(String, nullable=False, default=False)  
-
-class TokenBlacklist(Base):
-    __tablename__ = 'token_blacklist'
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    token = Column(String, unique=True, nullable=False)
-    blacklisted_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Image(Base):
     __tablename__ = 'images'
@@ -290,30 +283,13 @@ def create_user():
         first_name=data['first_name'],
         last_name=data['last_name'],
         password=hashed_password,
-        email=data['email'],
-        is_verified=False  
+        email=data['email']
     )
 
     session = Session()
     try:
         session.add(new_user)
         session.commit()
-
-        # Publish SNS message for email verification
-        sns_client = boto3.client('sns', region_name=os.getenv('AWS_REGION', 'us-east-1'))
-        sns_topic_arn = os.getenv('SNS_TOPIC_ARN')
-
-        if not sns_topic_arn:
-            logger.error("SNS_TOPIC_ARN is not set in environment variables.")
-            raise EnvironmentError("SNS_TOPIC_ARN environment variable is missing")
-
-        sns_message = json.dumps({"email": new_user.email, "user_id": str(new_user.id)})
-        sns_client.publish(
-            TopicArn=sns_topic_arn,
-            Message=sns_message
-        )
-        logger.info(f"SNS message sent for email verification: {sns_message}")
-
         created_user = session.query(User).filter_by(email=new_user.email).first()
         account_updated = created_user.account_updated or created_user.account_created
         response_data = OrderedDict([
@@ -322,13 +298,11 @@ def create_user():
             ('last_name', created_user.last_name),
             ('email', created_user.email),
             ('account_created', format_datetime_utc(created_user.account_created)),
-            ('account_updated', format_datetime_utc(account_updated)),
-            ('is_verified', created_user.is_verified)
+            ('account_updated', format_datetime_utc(account_updated))
         ])
         response_json = json.dumps(response_data)
         logger.info(f"User created successfully: {created_user.email}")
         return Response(response=response_json, status=201, mimetype='application/json')
-
     except IntegrityError:
         session.rollback()
         logger.error("Email already exists.")
@@ -337,26 +311,6 @@ def create_user():
         session.rollback()
         logger.error(f"Database error during user creation: {e}")
         return Response(status=503)
-    finally:
-        session.close()
-
-def authenticate_user():
-    auth = request.authorization
-    if not auth or not auth.username or not auth.password:
-        return None
-    session = Session()
-    try:
-        user = session.query(User).filter_by(email=auth.username).first()
-        if user and bcrypt.checkpw(auth.password.encode('utf-8'), user.password):
-            if not user.is_verified:
-                logger.warning(f"Unverified user tried to authenticate: {auth.username}")
-                return None  # Deny access for unverified users
-            return user
-        else:
-            return None
-    except Exception as e:
-        logger.error(f"Error during authentication: {e}")
-        return None
     finally:
         session.close()
 
@@ -416,58 +370,6 @@ def user_self():
         finally:
             session.close()
 
-@app.route('/v1/verify-email', methods=['GET'])
-@track_api_metrics('verify_email')
-def verify_email():
-    """
-    Verify the email of a user using the provided token.
-    """
-    token = request.args.get('token')
-    if not token:
-        return jsonify({"error": "Token is required"}), 400
-
-    session = Session()
-    try:
-        # Check if token is blacklisted
-        blacklisted_token = session.query(TokenBlacklist).filter_by(token=token).first()
-        if blacklisted_token:
-            return jsonify({"error": "Token is invalid or already used"}), 400
-
-        # Extract user_id and expiration time from the token
-        user_id, expiration_time = token.split(':')
-        expiration_time = datetime.fromisoformat(expiration_time)
-
-        # Check if the token has expired
-        if datetime.utcnow() > expiration_time:
-            # Add expired token to the blacklist
-            blacklisted = TokenBlacklist(token=token)
-            session.add(blacklisted)
-            session.commit()
-            return jsonify({"error": "Verification link has expired"}), 400
-
-        # Verify user in the database
-        user = session.query(User).filter_by(id=user_id).first()
-
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-
-        if user.is_verified:
-            return jsonify({"message": "Email is already verified"}), 200
-
-        # Mark user as verified and blacklist the token
-        user.is_verified = True
-        session.add(TokenBlacklist(token=token))  # Add token to blacklist
-        session.commit()
-
-        return jsonify({"message": "Email verified successfully"}), 200
-
-    except Exception as e:
-        logger.error(f"Error during email verification: {e}")
-        return jsonify({"error": "Failed to verify email"}), 500
-
-    finally:
-        session.close()
-        
 # Health check endpoint
 @app.route('/healthz', methods=['GET'])
 @track_api_metrics('health_check')

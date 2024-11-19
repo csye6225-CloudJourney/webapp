@@ -14,13 +14,13 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # Set environment variables before importing main
 os.environ['DB_USERNAME'] = 'test_user'
 os.environ['DB_PASSWORD'] = 'test_pass'
-os.environ['SNS_TOPIC_ARN'] = 'arn:aws:sns:us-east-1:123456789012:TestTopic'
 
 # Mock necessary components before importing main
 with patch('logging.getLogger') as mock_get_logger, \
+     patch('statsd.StatsClient', MagicMock()), \
      patch('sqlalchemy.create_engine') as mock_create_engine, \
      patch('sqlalchemy.orm.sessionmaker') as mock_sessionmaker, \
-     patch('boto3.client') as mock_boto3_client:  # Mock boto3.client
+     patch('boto3.client', MagicMock()):  # Add this line to mock boto3.client
 
     # Mock the logger to prevent actual logging during tests
     mock_logger = logging.getLogger('test_logger')
@@ -33,25 +33,8 @@ with patch('logging.getLogger') as mock_get_logger, \
     mock_sessionmaker_instance = MagicMock()
     mock_sessionmaker.return_value = mock_sessionmaker_instance
 
-    # Mock different AWS services
-    mock_sns_client = MagicMock()
-    mock_s3_client = MagicMock()
-    mock_logs_client = MagicMock()
-
-    def boto3_client_side_effect(service_name, *args, **kwargs):
-        if service_name == 'sns':
-            return mock_sns_client
-        elif service_name == 's3':
-            return mock_s3_client
-        elif service_name == 'logs':
-            return mock_logs_client
-        else:
-            raise ValueError(f"Unexpected service: {service_name}")
-
-    mock_boto3_client.side_effect = boto3_client_side_effect
-
     from main import app, Session  # Import Session directly
-
+    
 # Fixture for the test client
 @pytest.fixture(scope='function')
 def client():
@@ -97,13 +80,6 @@ def test_create_user_success(client):
     }
 
     response = client.post('/v1/user', json=payload, headers=headers)
-
-    # Verify SNS client was called
-    mock_sns_client.publish.assert_called_once_with(
-        TopicArn=os.environ['SNS_TOPIC_ARN'],
-        Message=MagicMock()
-    )
-
     assert response.status_code == 201
 
 def test_create_user_existing_email(client):
@@ -132,3 +108,32 @@ def test_create_user_existing_email(client):
 
     response = client.post('/v1/user', json=payload, headers=headers)
     assert response.status_code == 400
+
+def test_authenticate_user_success(client):
+    """Test successful user authentication"""
+    # Mock session
+    mock_session = MagicMock()
+    mock_sessionmaker_instance.return_value = mock_session  # Use the mocked sessionmaker instance
+
+    # Mock user object with hashed password
+    hashed_password = bcrypt.hashpw(b'testpassword', bcrypt.gensalt())
+    mock_user = MagicMock()
+    mock_user.password = hashed_password
+    mock_user.id = uuid.uuid4()
+    mock_user.first_name = 'Test'
+    mock_user.last_name = 'User'
+    mock_user.email = 'test.user@example.com'
+    mock_user.account_created = datetime.now(timezone.utc)
+    mock_user.account_updated = datetime.now(timezone.utc)
+
+    # Simulate user found in the database
+    mock_session.query.return_value.filter_by.return_value.first.return_value = mock_user
+
+    # Base64 encoded 'test.user@example.com:testpassword'
+    auth_headers = {
+        'Authorization': 'Basic dGVzdC51c2VyQGV4YW1wbGUuY29tOnRlc3RwYXNzd29yZA==',
+        'Content-Type': 'application/json'
+    }
+
+    response = client.get('/v1/user/self', headers=auth_headers)
+    assert response.status_code == 200
