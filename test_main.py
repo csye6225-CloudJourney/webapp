@@ -14,13 +14,14 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # Set environment variables before importing main
 os.environ['DB_USERNAME'] = 'test_user'
 os.environ['DB_PASSWORD'] = 'test_pass'
+os.environ['SNS_TOPIC_ARN'] = 'arn:aws:sns:us-east-1:123456789012:TestTopic'
 
 # Mock necessary components before importing main
 with patch('logging.getLogger') as mock_get_logger, \
      patch('statsd.StatsClient', MagicMock()), \
      patch('sqlalchemy.create_engine') as mock_create_engine, \
      patch('sqlalchemy.orm.sessionmaker') as mock_sessionmaker, \
-     patch('boto3.client', MagicMock()):  # Add this line to mock boto3.client
+     patch('boto3.client') as mock_boto3_client:  # Mock boto3.client
 
     # Mock the logger to prevent actual logging during tests
     mock_logger = logging.getLogger('test_logger')
@@ -33,8 +34,12 @@ with patch('logging.getLogger') as mock_get_logger, \
     mock_sessionmaker_instance = MagicMock()
     mock_sessionmaker.return_value = mock_sessionmaker_instance
 
+    # Mock SNS client
+    mock_sns_client = MagicMock()
+    mock_boto3_client.return_value = mock_sns_client
+
     from main import app, Session  # Import Session directly
-    
+
 # Fixture for the test client
 @pytest.fixture(scope='function')
 def client():
@@ -80,6 +85,11 @@ def test_create_user_success(client):
     }
 
     response = client.post('/v1/user', json=payload, headers=headers)
+
+    # Verify SNS client was called
+    mock_boto3_client.assert_called_once_with('sns', region_name='us-east-1')
+    mock_sns_client.publish.assert_called_once()
+
     assert response.status_code == 201
 
 def test_create_user_existing_email(client):
