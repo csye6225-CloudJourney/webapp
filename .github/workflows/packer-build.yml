@@ -51,6 +51,16 @@ jobs:
           AWS_REGION: us-east-1
           AWS_DEFAULT_REGION: us-east-1  
 
+      - name: Run `/cicd` endpoint tests
+        run: |
+          pytest test_main.py
+        env:
+          DB_USERNAME: testuser
+          DB_PASSWORD: testpassword
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: webapp_db
+
       - name: Build application artifact
         run: |
           mkdir -p build_output
@@ -71,6 +81,9 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
           aws-region: us-east-1
+
+      - name: Verify AWS Account in Workflow
+        run: aws sts get-caller-identity
 
       - name: Initialize Packer
         run: |
@@ -151,3 +164,8 @@ jobs:
               sleep 30
             fi
           done
+
+      - name: Verify `/cicd` endpoint
+        run: |
+          curl -f http://your-deployed-app-domain:8080/cicd
+        shell: bash
