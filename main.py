@@ -1,6 +1,6 @@
 import json
 from flask import Flask, request, Response, jsonify
-from sqlalchemy import create_engine, Column, String, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.dialects.postgresql import UUID
@@ -17,7 +17,8 @@ import time
 import logging
 import boto3
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+import secrets
 
 # Load environment variables
 load_dotenv()
@@ -28,7 +29,8 @@ app = Flask(__name__)
 statsd = StatsClient(host='localhost', port=8125, prefix='webapp')
 
 # Set up CloudWatch logging
-cloudwatch_logs_client = boto3.client('logs', region_name=os.getenv('AWS_REGION', 'us-east-1'))
+AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
+cloudwatch_logs_client = boto3.client('logs', region_name=AWS_REGION)
 log_group_name = '/webapp/application_logs'
 log_stream_name = f'{datetime.utcnow().strftime("%Y/%m/%d")}/webapp'
 
@@ -74,6 +76,8 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "webapp_db")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+SNS_TOPIC_ARN = os.getenv("SNS_TOPIC_ARN")
+AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 
 DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 engine = create_engine(DATABASE_URL)
@@ -81,7 +85,7 @@ Base = declarative_base()
 Session = sessionmaker(bind=engine)
 
 # Initialize S3 client
-s3_client = boto3.client('s3', region_name=os.getenv('AWS_REGION', 'us-east-1'))
+s3_client = boto3.client('s3', region_name=AWS_REGION)
 
 # Decorator to count API calls and track response time
 def track_api_metrics(endpoint):
@@ -89,7 +93,7 @@ def track_api_metrics(endpoint):
         @wraps(func)
         def wrapper(*args, **kwargs):
             start_time = time.time()
-            statsd.incr(f"{endpoint}.count")  # Count metric for API call
+            statsd.incr(f"{endpoint}.count")  
             try:
                 response = func(*args, **kwargs)
                 return response
@@ -141,6 +145,9 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     account_created = Column(DateTime(timezone=True), server_default=func.now())
     account_updated = Column(DateTime(timezone=True), onupdate=func.now())
+    verified = Column(Boolean, default=False)
+    verification_token = Column(String, nullable=True)
+    token_expiration = Column(DateTime(timezone=True), nullable=True)
 
 class Image(Base):
     __tablename__ = 'images'
@@ -175,7 +182,11 @@ def authenticate_user():
     try:
         user = session.query(User).filter_by(email=auth.username).first()
         if user and bcrypt.checkpw(auth.password.encode('utf-8'), user.password):
-            return user
+            if user.verified:
+                return user
+            else:
+                logger.error("User has not verified their email address.")
+                return None
         else:
             return None
     except Exception as e:
@@ -229,7 +240,7 @@ def user_profile_pic():
                 "upload_date": format_datetime_utc(new_image.upload_date),
                 "user_id": str(new_image.user_id)
             }), 201
-        
+
         elif request.method == 'GET':
             image = session.query(Image).filter_by(user_id=user.id).first()
             if not image:
@@ -279,11 +290,17 @@ def create_user():
         return Response(status=400)
 
     hashed_password = hash_password(data['password'])
+    verification_token = secrets.token_urlsafe(16)
+    token_expiration = datetime.utcnow() + timedelta(minutes=2)
+
     new_user = User(
         first_name=data['first_name'],
         last_name=data['last_name'],
         password=hashed_password,
-        email=data['email']
+        email=data['email'],
+        verified=False,
+        verification_token=verification_token,
+        token_expiration=token_expiration
     )
 
     session = Session()
@@ -302,6 +319,23 @@ def create_user():
         ])
         response_json = json.dumps(response_data)
         logger.info(f"User created successfully: {created_user.email}")
+
+        # Publish message to SNS
+        try:
+            lambda_client = boto3.client('lambda', region_name=AWS_REGION)
+            message = {
+                        'email': created_user.email,
+                        'verification_token': created_user.verification_token
+                    }
+            lambda_client.invoke(
+                FunctionName='email-verification-handler',
+                InvocationType='Event',
+                Payload=json.dumps(message)
+            )
+            logger.info(f"Published message to SNS for user: {created_user.email}")
+            logger.info(message)
+        except Exception as e:
+            logger.error(f"Failed to publish message to SNS: {e}")
         return Response(response=response_json, status=201, mimetype='application/json')
     except IntegrityError:
         session.rollback()
@@ -370,6 +404,43 @@ def user_self():
         finally:
             session.close()
 
+# Email verification endpoint
+@app.route('/verify', methods=['GET'])
+def verify_email():
+    token = request.args.get('token')
+    logger.info(f"Verification token received: {token}")
+    if not token:
+        logger.error("Verification token is missing.")
+        return jsonify({'error': 'Verification token is missing'}), 400
+
+    session = Session()
+    try:
+        user = session.query(User).filter_by(verification_token=token).first()
+        logger.info(f"User found: {user.email if user else 'None'}")
+        if not user:
+            logger.error("Invalid verification token.")
+            return jsonify({'error': 'Invalid verification token'}), 400
+
+        current_time = datetime.now(timezone.utc)  
+        logger.info(f"Token expiration: {user.token_expiration}, Current time: {current_time}")
+        if user.token_expiration < current_time:
+            logger.error("Verification token has expired.")
+            return jsonify({'error': 'Verification token has expired'}), 400
+
+        user.verified = True
+        user.verification_token = None
+        user.token_expiration = None
+        session.commit()
+        logger.info(f"User {user.email} verified successfully.")
+        return jsonify({'message': 'Email verified successfully'}), 200
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error during email verification: {e}")
+        return Response(status=500)
+    finally:
+        session.close()
+        
 # Health check endpoint
 @app.route('/healthz', methods=['GET'])
 @track_api_metrics('health_check')
