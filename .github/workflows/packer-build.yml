@@ -68,8 +68,8 @@ jobs:
       - name: Configure AWS Credentials (Dev Account)
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
           aws-region: us-east-1
 
       - name: Initialize Packer
@@ -86,6 +86,11 @@ jobs:
           packer build -machine-readable webapp.pkr.hcl | tee packer_output.log
           AMI_ID=$(grep 'artifact,0,id' packer_output.log | cut -d, -f6 | cut -d: -f2)
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
+          echo "Extracted AMI ID: $AMI_ID"
+          if [ -z "$AMI_ID" ]; then
+              echo "Error: AMI ID not extracted properly."
+              exit 1
+          fi
 
       - name: Share AMI with DEMO account
         uses: aws-actions/configure-aws-credentials@v2
@@ -96,7 +101,7 @@ jobs:
 
       - name: Modify AMI launch permissions
         run: |
-          aws ec2 modify-image-attribute --image-id ${{ steps.build-image.outputs.ami_id }} --launch-permission "Add=[{UserId=715841348526}]"
+          aws ec2 modify-image-attribute --image-id ${{ steps.build-image.outputs.ami_id }} --launch-permission "Add=[{UserId=651706766149}]"
 
       - name: Upgrade OS Packages
         run: |
@@ -117,7 +122,7 @@ jobs:
         run: |
           aws ec2 create-launch-template-version \
             --launch-template-id lt-abc1234567890 \
-            --source-version ${{ steps.build-image.outputs.ami_id }} \
+            --source-version 1 \
             --launch-template-data '{"ImageId":"${{ steps.build-image.outputs.ami_id }}"}'
 
       - name: Start Auto-Scaling Group Instance Refresh
