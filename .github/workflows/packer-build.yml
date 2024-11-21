@@ -112,13 +112,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEMO }}
           aws-region: us-east-1
 
-       - name: Modify AMI launch permissions
+      - name: Modify AMI launch permissions
         run: |
           echo "Adding launch permissions for AMI: ${{ steps.build-image.outputs.ami_id }}"
           aws ec2 modify-image-attribute \
             --image-id ${{ steps.build-image.outputs.ami_id }} \
             --launch-permission "Add=[{UserId=${{ secrets.DEMO_ACCOUNT_ID }}}]"
-          echo "AMI launch permissions modified successfully."
+          echo "AMI launch permissions modified successfully." 
 
       - name: Upgrade OS Packages
         run: |
