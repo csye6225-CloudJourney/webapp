@@ -114,8 +114,12 @@ jobs:
 
       - name: Modify AMI launch permissions
         run: |
-          aws ec2 modify-image-attribute --image-id ${{ steps.build-image.outputs.ami_id }} --launch-permission "Add=[{UserId=651706766149}]"
-
+            echo "Adding launch permissions for AMI: ${{ steps.build-image.outputs.ami_id }}"
+            aws ec2 modify-image-attribute \
+              --image-id ${{ steps.build-image.outputs.ami_id }} \
+              --launch-permission "Add=[{UserId=${{ secrets.DEMO_ACCOUNT_ID }}]"
+            echo "AMI launch permissions modified successfully."
+            
       - name: Upgrade OS Packages
         run: |
           sudo apt-get update
