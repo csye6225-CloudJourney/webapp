@@ -171,5 +171,5 @@ jobs:
 
       - name: Verify `/cicd` endpoint
         run: |
-          curl -f http://demo.cloudjourney.me:8080/cicd
+          curl -f http://demo.cloudjourney.me/cicd
         shell: bash
