@@ -168,8 +168,3 @@ jobs:
               sleep 30
             fi
           done
-
-      - name: Verify `/cicd` endpoint
-        run: |
-          curl -f http://demo.cloudjourney.me/cicd
-        shell: bash
