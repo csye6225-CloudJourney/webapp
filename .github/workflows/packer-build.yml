@@ -124,6 +124,13 @@ jobs:
           sudo cp webapp.service /etc/systemd/system/
           sudo systemctl daemon-reload
           sudo systemctl enable webapp
+      
+      - name: Configure AWS for using launch template
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEMO }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEMO }}
+            aws-region: us-east-1
 
       - name: Use existing launch template
         run: |
