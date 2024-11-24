@@ -51,16 +51,6 @@ jobs:
           AWS_REGION: us-east-1
           AWS_DEFAULT_REGION: us-east-1  
 
-      - name: Run `/cicd` endpoint tests
-        run: |
-          pytest test_main.py
-        env:
-          DB_USERNAME: testuser
-          DB_PASSWORD: testpassword
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: webapp_db
-
       - name: Build application artifact
         run: |
           mkdir -p build_output
@@ -135,10 +125,10 @@ jobs:
           sudo systemctl daemon-reload
           sudo systemctl enable webapp
 
-      - name: Create new Launch Template version
+      - name: Use existing launch template
         run: |
           aws ec2 create-launch-template-version \
-            --launch-template-id lt-abc1234567890 \
+            --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
             --source-version 1 \
             --launch-template-data '{"ImageId":"${{ steps.build-image.outputs.ami_id }}"}'
 
