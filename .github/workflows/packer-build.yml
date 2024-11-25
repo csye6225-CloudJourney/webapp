@@ -94,56 +94,38 @@ jobs:
               echo "Error: AMI ID not extracted properly."
               exit 1
           fi
+          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
 
-      - name: Share AMI with DEMO account
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
-          aws-region: us-east-1
-
-      - name: Modify AMI launch permissions
+      - name: Share AMI with Demo Account
         run: |
-          echo "Adding launch permissions for AMI: ${{ steps.build-image.outputs.ami_id }}"
-          aws ec2 modify-image-attribute \
-            --image-id ${{ steps.build-image.outputs.ami_id }} \
-            --launch-permission "Add=[{UserId=${{ secrets.AWS_DEMO_ACCOUNT_ID }}}]"
-          echo "AMI launch permissions modified successfully." 
-
-      - name: Upgrade OS Packages
-        run: |
-          sudo apt-get update
-          sudo apt-get upgrade -y
-
-      - name: Install application dependencies
-        run: |
-          python -m pip install -r requirements.txt
-
-      - name: Configure application auto-start
-        run: |
-          sudo cp webapp.service /etc/systemd/system/
-          sudo systemctl daemon-reload
-          sudo systemctl enable webapp
-      
-      - name: Configure AWS for using launch template
+            echo "Adding launch permissions for AMI: ${{ steps.build-image.outputs.ami_id }}"
+            aws ec2 modify-image-attribute \
+              --image-id ${{ steps.build-image.outputs.ami_id }} \
+              --launch-permission "Add=[{UserId=${{ secrets.AWS_DEMO_ACCOUNT_ID }}}]"
+            echo "AMI launch permissions modified successfully."
+  
+      - name: Configure AWS Credentials (Demo Account)
         uses: aws-actions/configure-aws-credentials@v2
         with:
             aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEMO }}
             aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEMO }}
             aws-region: us-east-1
 
-      - name: Use existing launch template
+      - name: Verify AWS Account in Workflow (Demo Account)
+        run: aws sts get-caller-identity
+
+      - name: Create new launch template version with new AMI and set as default
         run: |
           aws ec2 create-launch-template-version \
             --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
-            --source-version 1 \
-            --launch-template-data '{"ImageId":"${{ steps.build-image.outputs.ami_id }}"}'
+            --launch-template-data '{"ImageId":"'"${{ steps.build-image.outputs.ami_id }}"'"}' \
+            --set-default-version
 
       - name: Start Auto-Scaling Group Instance Refresh
         id: instance-refresh
         run: |
           REFRESH_ID=$(aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name my-auto-scaling-group \
+            --auto-scaling-group-name ${{ secrets.AUTO_SCALING_GROUP_NAME }} \
             --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' \
             --query 'InstanceRefreshId' --output text)
           echo "refresh_id=$REFRESH_ID" >> $GITHUB_OUTPUT
@@ -152,7 +134,7 @@ jobs:
         run: |
           while true; do
             STATUS=$(aws autoscaling describe-instance-refreshes \
-              --auto-scaling-group-name my-auto-scaling-group \
+              --auto-scaling-group-name ${{ secrets.AUTO_SCALING_GROUP_NAME }} \
               --instance-refresh-ids ${{ steps.instance-refresh.outputs.refresh_id }} \
               --query 'InstanceRefreshes[0].Status' --output text)
             echo "Current status: $STATUS"
