@@ -114,13 +114,23 @@ jobs:
       - name: Verify AWS Account in Workflow (Demo Account)
         run: aws sts get-caller-identity
 
-      - name: Create new launch template version with new AMI and set as default
+      - name: Create new launch template version with new AMI
+        id: create-lt-version
         run: |
-          aws ec2 create-launch-template-version \
+          OUTPUT=$(aws ec2 create-launch-template-version \
             --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
-            --launch-template-data '{"ImageId":"'"${{ steps.build-image.outputs.ami_id }}"'"}' \
-            --set-default-version
-
+            --launch-template-data '{"ImageId":"'"${{ steps.build-image.outputs.ami_id }}"'"}')
+          VERSION_NUMBER=$(echo "$OUTPUT" | jq -r '.LaunchTemplateVersion.VersionNumber')
+          echo "Created Launch Template Version: $VERSION_NUMBER"
+          echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
+      
+      - name: Set new launch template version as default
+        run: |
+          aws ec2 modify-launch-template \
+            --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
+            --default-version ${{ steps.create-lt-version.outputs.version_number }}
+          echo "Set Launch Template Version ${{ steps.create-lt-version.outputs.version_number }} as default."
+      
       - name: Start Auto-Scaling Group Instance Refresh
         id: instance-refresh
         run: |
@@ -128,7 +138,9 @@ jobs:
             --auto-scaling-group-name ${{ secrets.AUTO_SCALING_GROUP_NAME }} \
             --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' \
             --query 'InstanceRefreshId' --output text)
+          echo "Started Instance Refresh with ID: $REFRESH_ID"
           echo "refresh_id=$REFRESH_ID" >> $GITHUB_OUTPUT
+      
 
       - name: Wait for Instance Refresh to Complete
         run: |
