@@ -119,7 +119,7 @@ jobs:
         run: |
           OUTPUT=$(aws ec2 create-launch-template-version \
             --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
-            --launch-template-data '{"ImageId":"'"${{ steps.build-image.outputs.ami_id }}"'"}')
+            --launch-template-data '{"ImageId":"'"${{ steps.build-image.outputs.ami_id }}"'", "InstanceType":"t2.micro"}')
           VERSION_NUMBER=$(echo "$OUTPUT" | jq -r '.LaunchTemplateVersion.VersionNumber')
           echo "Created Launch Template Version: $VERSION_NUMBER"
           echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
