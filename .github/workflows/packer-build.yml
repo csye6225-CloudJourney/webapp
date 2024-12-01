@@ -65,15 +65,12 @@ jobs:
         with:
           version: '1.11.2'
 
-      - name: Configure AWS Credentials (Dev Account)
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
           aws-region: us-east-1
-
-      - name: Verify AWS Account in Workflow
-        run: aws sts get-caller-identity
 
       - name: Initialize Packer
         run: |
@@ -89,73 +86,9 @@ jobs:
           packer build -machine-readable webapp.pkr.hcl | tee packer_output.log
           AMI_ID=$(grep 'artifact,0,id' packer_output.log | cut -d, -f6 | cut -d: -f2)
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
-          echo "Extracted AMI ID: $AMI_ID"
-          if [ -z "$AMI_ID" ]; then
-              echo "Error: AMI ID not extracted properly."
-              exit 1
-          fi
-          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
 
-      - name: Share AMI with Demo Account
+      - name: Share AMI with DEMO account
         run: |
-            echo "Adding launch permissions for AMI: ${{ steps.build-image.outputs.ami_id }}"
-            aws ec2 modify-image-attribute \
-              --image-id ${{ steps.build-image.outputs.ami_id }} \
-              --launch-permission "Add=[{UserId=${{ secrets.AWS_DEMO_ACCOUNT_ID }}}]"
-            echo "AMI launch permissions modified successfully."
-  
-      - name: Configure AWS Credentials (Demo Account)
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEMO }}
-            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEMO }}
-            aws-region: us-east-1
-
-      - name: Verify AWS Account in Workflow (Demo Account)
-        run: aws sts get-caller-identity
-
-      - name: Create new launch template version with new AMI
-        id: create-lt-version
-        run: |
-          OUTPUT=$(aws ec2 create-launch-template-version \
-            --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
-            --launch-template-data '{"ImageId":"'"${{ steps.build-image.outputs.ami_id }}"'", "InstanceType":"t2.micro"}')
-          VERSION_NUMBER=$(echo "$OUTPUT" | jq -r '.LaunchTemplateVersion.VersionNumber')
-          echo "Created Launch Template Version: $VERSION_NUMBER"
-          echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
-      
-      - name: Set new launch template version as default
-        run: |
-          aws ec2 modify-launch-template \
-            --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
-            --default-version ${{ steps.create-lt-version.outputs.version_number }}
-          echo "Set Launch Template Version ${{ steps.create-lt-version.outputs.version_number }} as default."
-      
-      - name: Start Auto-Scaling Group Instance Refresh
-        id: instance-refresh
-        run: |
-          REFRESH_ID=$(aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name ${{ secrets.AUTO_SCALING_GROUP_NAME }} \
-            --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' \
-            --query 'InstanceRefreshId' --output text)
-          echo "Started Instance Refresh with ID: $REFRESH_ID"
-          echo "refresh_id=$REFRESH_ID" >> $GITHUB_OUTPUT
-      
-
-      - name: Wait for Instance Refresh to Complete
-        run: |
-          while true; do
-            STATUS=$(aws autoscaling describe-instance-refreshes \
-              --auto-scaling-group-name ${{ secrets.AUTO_SCALING_GROUP_NAME }} \
-              --instance-refresh-ids ${{ steps.instance-refresh.outputs.refresh_id }} \
-              --query 'InstanceRefreshes[0].Status' --output text)
-            echo "Current status: $STATUS"
-            if [[ "$STATUS" == "Successful" ]]; then
-              break
-            elif [[ "$STATUS" == "Failed" ]]; then
-              echo "Instance Refresh failed."
-              exit 1
-            else
-              sleep 30
-            fi
-          done
+          aws ec2 modify-image-attribute 
+          --image-id ${{ steps.build-image.outputs.ami_id }} 
+          --launch-permission "Add=[{UserId=${{ secrets.AWS_DEMO_ACCOUNT_ID }}]}"
