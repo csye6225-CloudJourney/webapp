@@ -1,7 +1,7 @@
 name: Packer Build and Artifact Integration
 
 on:
-  push:
+  pull_request:
     branches:
       - main
 
