@@ -89,4 +89,4 @@ jobs:
 
       - name: Share AMI with DEMO account
         run: |
-          aws ec2 modify-image-attribute --image-id ${{ steps.build-image.outputs.ami_id }} --launch-permission '{"Add":[{"UserId":"${{ secrets.AWS_DEMO_ACCOUNT_ID }}"]}'
+          aws ec2 modify-image-attribute --image-id ${{ steps.build-image.outputs.ami_id }} --launch-permission '{"Add":[{"UserId":"${{ secrets.AWS_DEMO_ACCOUNT_ID }}"}]}'
