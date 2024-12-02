@@ -478,42 +478,6 @@ def method_not_allowed():
     }
     return Response(status=405, headers=headers)
 
-@app.route('/ci1234', methods=['GET'])
-@track_api_metrics('ci_check')
-def ci_check():
-    if request.args or request.data:
-        logger.error("Health check endpoint received unexpected data.")
-        return Response(status=400)
-
-    try:
-        with engine.connect() as connection:
-            connection.exec_driver_sql("SELECT 1")
-            headers = {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'X-Content-Type-Options': 'nosniff'
-            }
-            logger.info("Health check successful.")
-            return Response(status=200, headers=headers)
-    except SQLAlchemyError as e:
-        headers = {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'X-Content-Type-Options': 'nosniff'
-        }
-        logger.error(f"Health check failed: {e}")
-        return Response(status=503, headers=headers)
-
-# Method Not Allowed responses for disallowed methods on /healthz
-@app.route('/ci1234', methods=['POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'])
-def method_not_allowed123():
-    headers = {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'X-Content-Type-Options': 'nosniff'
-    }
-
-
 if __name__ == '__main__':
     bootstrap_database()
     app.run(host='0.0.0.0', port=8080)
