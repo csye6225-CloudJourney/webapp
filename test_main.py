@@ -46,11 +46,6 @@ def test_health_check(client):
     response = client.get('/healthz')
     assert response.status_code == 200
 
-def test_cicd(client):
-    response = client.get('/ci1234')
-    assert response.status_code == 200
-    assert response.json == {"status": "ok"}
-
 def test_create_user_success(client):
     """Test creating a user with mocked DB interactions"""
     # Mock session

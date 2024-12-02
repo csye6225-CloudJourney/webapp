@@ -479,8 +479,8 @@ def method_not_allowed():
     return Response(status=405, headers=headers)
 
 @app.route('/ci1234', methods=['GET'])
-@track_api_metrics('health_check')
-def health_check():
+@track_api_metrics('ci_check')
+def ci_check():
     if request.args or request.data:
         logger.error("Health check endpoint received unexpected data.")
         return Response(status=400)
@@ -506,7 +506,7 @@ def health_check():
 
 # Method Not Allowed responses for disallowed methods on /healthz
 @app.route('/ci1234', methods=['POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'])
-def method_not_allowed():
+def method_not_allowed123():
     headers = {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
