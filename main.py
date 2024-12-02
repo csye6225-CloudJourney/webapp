@@ -478,10 +478,6 @@ def method_not_allowed():
     }
     return Response(status=405, headers=headers)
 
-@app.route('/cicd', methods=['GET'])
-def cicd():
-    return jsonify({"status": "ok"}), 200
-
 if __name__ == '__main__':
     bootstrap_database()
     app.run(host='0.0.0.0', port=8080)
