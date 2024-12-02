@@ -47,7 +47,7 @@ def test_health_check(client):
     assert response.status_code == 200
 
 def test_cicd(client):
-    response = client.get('/cicd')
+    response = client.get('/ci1234')
     assert response.status_code == 200
     assert response.json == {"status": "ok"}
 
