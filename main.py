@@ -442,7 +442,7 @@ def verify_email():
         session.close()
         
 # Health check endpoint
-@app.route('/healthz', methods=['GET'])
+@app.route('/ci123', methods=['GET'])
 @track_api_metrics('health_check')
 def health_check():
     if request.args or request.data:
@@ -469,7 +469,7 @@ def health_check():
         return Response(status=503, headers=headers)
 
 # Method Not Allowed responses for disallowed methods on /healthz
-@app.route('/healthz', methods=['POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'])
+@app.route('/ci123', methods=['POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'])
 def method_not_allowed():
     headers = {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -478,9 +478,7 @@ def method_not_allowed():
     }
     return Response(status=405, headers=headers)
 
-@app.route('/cicd', methods=['GET'])
-def cicd():
-    return jsonify({"status": "ok"}), 200
+
 
 if __name__ == '__main__':
     bootstrap_database()
