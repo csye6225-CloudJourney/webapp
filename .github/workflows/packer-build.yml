@@ -3,7 +3,7 @@ name: Packer Build and Artifact Integration
 on:
   push:
     branches:
-      - main
+      - demoa8
 
 jobs:
   build:
@@ -65,7 +65,7 @@ jobs:
         with:
           version: '1.11.2'
 
-      - name: Configure AWS Credentials (Dev Account)
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
@@ -86,50 +86,37 @@ jobs:
           packer build -machine-readable webapp.pkr.hcl | tee packer_output.log
           AMI_ID=$(grep 'artifact,0,id' packer_output.log | cut -d, -f6 | cut -d: -f2)
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
-          echo "Extracted AMI ID: $AMI_ID"
-          if [ -z "$AMI_ID" ]; then
-              echo "Error: AMI ID not extracted properly."
-              exit 1
-          fi
 
       - name: Share AMI with DEMO account
+        run: |
+          aws ec2 modify-image-attribute --image-id ${{ steps.build-image.outputs.ami_id }} --launch-permission '{"Add":[{"UserId":"${{ secrets.AWS_DEMO_ACCOUNT_ID }}"}]}'
+
+      - name: Configure AWS Credentials for DEMO Account
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEMO }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEMO }}
           aws-region: us-east-1
 
-      - name: Modify AMI launch permissions
-        run: |
-          aws ec2 modify-image-attribute --image-id ${{ steps.build-image.outputs.ami_id }} --launch-permission "Add=[{UserId=651706766149}]"
-
-      - name: Upgrade OS Packages
-        run: |
-          sudo apt-get update
-          sudo apt-get upgrade -y
-
-      - name: Install application dependencies
-        run: |
-          python -m pip install -r requirements.txt
-
-      - name: Configure application auto-start
-        run: |
-          sudo cp webapp.service /etc/systemd/system/
-          sudo systemctl daemon-reload
-          sudo systemctl enable webapp
-
-      - name: Create new Launch Template version
+      - name: Create new Launch Template version with latest AMI
         run: |
           aws ec2 create-launch-template-version \
-            --launch-template-id lt-abc1234567890 \
-            --source-version 1 \
+            --launch-template-name "${{ secrets.LAUNCH_TEMPLATE_NAME }}" \
+            --source-version '$Latest' \
+            --version-description "Updated with new AMI ID" \
             --launch-template-data '{"ImageId":"${{ steps.build-image.outputs.ami_id }}"}'
 
-      - name: Start Auto-Scaling Group Instance Refresh
-        id: instance-refresh
+      - name: Set Launch Template default version to $Latest
+        run: |
+          aws ec2 modify-launch-template \
+            --launch-template-name "${{ secrets.LAUNCH_TEMPLATE_NAME }}" \
+            --default-version '$Latest'
+
+      - name: Start Instance Refresh on Auto Scaling Group
+        id: start-refresh
         run: |
           REFRESH_ID=$(aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name my-auto-scaling-group \
+            --auto-scaling-group-name "${{ secrets.AUTO_SCALING_GROUP_NAME }}" \
             --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' \
             --query 'InstanceRefreshId' --output text)
           echo "refresh_id=$REFRESH_ID" >> $GITHUB_OUTPUT
@@ -138,16 +125,19 @@ jobs:
         run: |
           while true; do
             STATUS=$(aws autoscaling describe-instance-refreshes \
-              --auto-scaling-group-name my-auto-scaling-group \
-              --instance-refresh-ids ${{ steps.instance-refresh.outputs.refresh_id }} \
-              --query 'InstanceRefreshes[0].Status' --output text)
+              --auto-scaling-group-name "${{ secrets.AUTO_SCALING_GROUP_NAME }}" \
+              --instance-refresh-ids "${{ steps.start-refresh.outputs.refresh_id }}" \
+              --query 'InstanceRefreshes[0].Status' \
+              --output text)
             echo "Current status: $STATUS"
-            if [[ "$STATUS" == "Successful" ]]; then
-              break
-            elif [[ "$STATUS" == "Failed" ]]; then
-              echo "Instance Refresh failed."
+            if [ "$STATUS" == "Successful" ]; then
+              echo "Instance refresh completed successfully."
+              exit 0
+            elif [ "$STATUS" == "Failed" ]; then
+              echo "Instance refresh failed."
               exit 1
             else
+              echo "Instance refresh in progress. Waiting for 30 seconds..."
               sleep 30
             fi
           done
