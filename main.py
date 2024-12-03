@@ -478,6 +478,43 @@ def method_not_allowed():
     }
     return Response(status=405, headers=headers)
 
+# Health check endpoint
+@app.route('/cicd', methods=['GET'])
+@track_api_metrics('cicd')
+def cicd():
+    if request.args or request.data:
+        logger.error("Health check endpoint received unexpected data.")
+        return Response(status=400)
+
+    try:
+        with engine.connect() as connection:
+            connection.exec_driver_sql("SELECT 1")
+            headers = {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'X-Content-Type-Options': 'nosniff'
+            }
+            logger.info("Health check successful.")
+            return Response(status=200, headers=headers)
+    except SQLAlchemyError as e:
+        headers = {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'X-Content-Type-Options': 'nosniff'
+        }
+        logger.error(f"Health check failed: {e}")
+        return Response(status=503, headers=headers)
+
+# Method Not Allowed responses for disallowed methods on /cicd
+@app.route('/cicd', methods=['POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'])
+def method_not_allowed1():
+    headers = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'X-Content-Type-Options': 'nosniff'
+    }
+    return Response(status=405, headers=headers)
+
 if __name__ == '__main__':
     bootstrap_database()
     app.run(host='0.0.0.0', port=8080)
